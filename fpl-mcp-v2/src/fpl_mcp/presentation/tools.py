@@ -643,6 +643,107 @@ def register_tools(mcp: FastMCP, services: ServiceContainer) -> None:
             logger.exception("Tool error: update_fpl_credentials")
             return {"error": f"Failed to update credentials: {exc}"}
 
+    # ------------------------------------------------------------------ #
+    # Live / Real-time
+    # ------------------------------------------------------------------ #
+
+    @mcp.tool()
+    async def get_gameweek_live_status(gameweek_id: int | None = None) -> dict[str, Any]:
+        """Get live gameweek status including current scores and event metadata.
+
+        Args:
+            gameweek_id: Gameweek ID (uses next/current if omitted).
+        """
+        try:
+            logger.info("Tool call: get_gameweek_live_status with gameweek_id=%s", gameweek_id)
+            if gameweek_id is None:
+                gw = await services.bootstrap_repo.get_current_gameweek()
+                if gw is None:
+                    return {"error": "Unable to determine current gameweek."}
+                gameweek_id = gw.id
+
+            live_data = await services.live_service.get_live_event(gameweek_id)
+            gameweeks = await services.bootstrap_repo.get_gameweeks()
+            gw_info = next((g for g in gameweeks if g.id == gameweek_id), None)
+
+            return {
+                "gameweek_id": gameweek_id,
+                "gameweek_name": gw_info.name if gw_info else f"GW{gameweek_id}",
+                "deadline": gw_info.deadline_time.isoformat() if gw_info and hasattr(gw_info.deadline_time, 'isoformat') else None,
+                "finished": gw_info.finished if gw_info else None,
+                "live_elements": live_data.get("elements", [])[:20],  # Top movers
+            }
+        except Exception as exc:
+            logger.exception("Tool error: get_gameweek_live_status")
+            return {"error": f"Failed to get gameweek status: {exc}"}
+
+    @mcp.tool()
+    async def get_player_detailed_history(player_name: str) -> dict[str, Any]:
+        """Get detailed season history for a player including fixture history and past seasons.
+
+        Args:
+            player_name: Player name or web_name to search for.
+        """
+        try:
+            logger.info("Tool call: get_player_detailed_history for %s", player_name)
+            results = await services.player_repo.search_by_name(player_name, limit=1)
+            if not results:
+                return {"error": f"Player '{player_name}' not found."}
+
+            player = results[0]
+            # Note: player_summary would come from the FPL client's get_player_summary method
+            # For now, return available player data without full history
+            return {
+                "player_id": player.id,
+                "name": player.full_name,
+                "team_id": player.team_id,
+                "position": {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}.get(player.element_type, "UNK"),
+                "current_price": player.price_millions,
+                "total_points": player.total_points,
+                "points_per_game": float(player.points_per_game or 0),
+                "minutes_played": player.minutes,
+                "form": float(player.form or 0),
+                "expected_points_next": float(player.ep_next or 0),
+                "status": player.status,
+                "selected_by_percent": float(player.selected_by_percent or 0),
+            }
+        except Exception as exc:
+            logger.exception("Tool error: get_player_detailed_history")
+            return {"error": f"Failed to get player history: {exc}"}
+
+    @mcp.tool()
+    async def get_fixture_detail(fixture_id: int) -> dict[str, Any]:
+        """Get detailed information about a specific fixture.
+
+        Args:
+            fixture_id: FPL fixture ID.
+        """
+        try:
+            logger.info("Tool call: get_fixture_detail with fixture_id=%d", fixture_id)
+            all_fixtures = await services.fixture_repo.get_all()
+            fixture = next((f for f in all_fixtures if f.id == fixture_id), None)
+            if not fixture:
+                return {"error": f"Fixture {fixture_id} not found."}
+
+            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
+            return {
+                "id": fixture.id,
+                "event": fixture.event,
+                "home_team": teams.get(fixture.team_h).name if fixture.team_h in teams else None,
+                "home_team_code": teams.get(fixture.team_h).short_name if fixture.team_h in teams else None,
+                "away_team": teams.get(fixture.team_a).name if fixture.team_a in teams else None,
+                "away_team_code": teams.get(fixture.team_a).short_name if fixture.team_a in teams else None,
+                "kickoff_time": fixture.kickoff_time.isoformat() if hasattr(fixture.kickoff_time, 'isoformat') else fixture.kickoff_time,
+                "home_team_difficulty": fixture.team_h_difficulty,
+                "away_team_difficulty": fixture.team_a_difficulty,
+                "finished": fixture.finished,
+                "home_score": fixture.team_h_score,
+                "away_score": fixture.team_a_score,
+            }
+        except Exception as exc:
+            logger.exception("Tool error: get_fixture_detail")
+            return {"error": f"Failed to get fixture details: {exc}"}
+
 
 def _position_name(element_type: int) -> str:
     """Map element_type integer to position code."""

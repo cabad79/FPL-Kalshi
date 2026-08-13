@@ -13,7 +13,7 @@ class Team(BaseModel):
     id: int
     name: str
     short_name: str
-    strength: int = Field(..., ge=1, le=5)
+    strength: int | None = Field(default=None, ge=1, le=5)
     strength_overall_home: int
     strength_overall_away: int
     strength_attack_home: int

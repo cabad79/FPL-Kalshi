@@ -1,6 +1,6 @@
 """Player domain model for FPL API data."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PlayerStatus(str):
@@ -28,11 +28,13 @@ class Player(BaseModel):
     endpoint. Includes all statistics, form, and expected goals metrics.
     """
 
+    model_config = ConfigDict(populate_by_name=True)
+
     id: int
     first_name: str
     second_name: str
     web_name: str
-    team_id: int
+    team_id: int = Field(validation_alias="team")
     element_type: int  # 1=GKP, 2=DEF, 3=MID, 4=FWD
     now_cost: int  # In 0.1m units (e.g., 105 = £10.5m)
     total_points: int
