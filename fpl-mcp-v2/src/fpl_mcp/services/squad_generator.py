@@ -23,9 +23,9 @@ class SquadGenerator:
         special_gameweeks: dict[int, str] | None = None,
     ):
         self._all_players = [p for p in all_players if p.status == "a"]
-        self._players_by_position = self._organize_by_position()
         self._contrarian_mode = contrarian_mode
         self._special_gameweeks = special_gameweeks or {}
+        self._players_by_position = self._organize_by_position()
         if seed is not None:
             random.seed(seed)
 
