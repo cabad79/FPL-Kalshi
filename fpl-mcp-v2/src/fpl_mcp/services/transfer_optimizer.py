@@ -48,10 +48,13 @@ class TransferOptimizer:
         all_players: list[Player],
         fixtures: list[Fixture],
         teams: dict[int, Team],
+        contrarian_mode: bool = False,
     ):
         self._all_players = [p for p in all_players if p.status == "a"]
         self._fixtures = fixtures
         self._teams = teams
+        self._contrarian_mode = contrarian_mode
+        self._special_gameweeks = self._detect_special_gameweeks()
 
     def suggest_transfers(
         self,
@@ -59,6 +62,7 @@ class TransferOptimizer:
         num_transfers: int = 1,
         budget_available: float = 0.5,
         priority: str = "points",  # "points", "form", "fixtures"
+        auto_detect_wildcard: bool = True,
     ) -> TransferSet:
         """Suggest optimal transfers for the coming gameweek.
 
@@ -67,6 +71,7 @@ class TransferOptimizer:
             num_transfers: How many changes to make (1-3)
             budget_available: Available £m for transfers
             priority: Optimization metric
+            auto_detect_wildcard: Auto-suggest wildcard if 3+ changes needed
 
         Returns:
             TransferSet with recommendations and strategy
@@ -122,17 +127,24 @@ class TransferOptimizer:
                 total_gain += gain
                 budget_available -= cost
 
+        # Auto-detect wildcard usage if 3+ changes needed
+        use_wildcard = (
+            auto_detect_wildcard
+            and len(recommendations) >= 3
+            and total_gain > 5.0
+        )
+
         return TransferSet(
             recommendations=sorted(
                 recommendations, key=lambda r: r.projected_change, reverse=True
             ),
             total_cost=round(total_cost, 1),
             total_projected_gain=round(total_gain, 1),
-            use_wildcard=False,
+            use_wildcard=use_wildcard,
             use_free_hit=False,
             use_triple_captain=False,
             use_bench_boost=False,
-            notes=self._generate_notes(recommendations),
+            notes=self._generate_notes(recommendations, use_wildcard),
         )
 
     def suggest_wildcard_squad(
@@ -240,14 +252,36 @@ class TransferOptimizer:
             # Weighted: form + ep_next
             form = float(player.form or 0)
             ep = float(player.ep_next or 0)
-            return (form * 0.4) + (ep * 0.6)
+            score = (form * 0.4) + (ep * 0.6)
+
+            # Apply DGW/BGW adjustment
+            team_status = self._special_gameweeks.get(player.team_id, "normal")
+            if team_status == "dgw":
+                score *= 1.5  # Double gameweek bonus
+            elif team_status == "bgw":
+                score *= 0.0  # Blank gameweek
+
+            # Apply contrarian ownership fading
+            if self._contrarian_mode:
+                ownership = float(player.selected_by_percent or 0)
+                ownership_factor = 1.0 - ((ownership / 100) * 0.3)
+                score *= max(ownership_factor, 0.5)
+
+            return score
         elif metric == "form":
             return float(player.form or 0)
         elif metric == "fixtures":
             # Fixture difficulty bonus
             fixtures = self._get_player_fixtures(player.team_id, 3)
             difficulty_sum = sum(f.team_h_difficulty + f.team_a_difficulty for f in fixtures)
-            return 10 - (difficulty_sum / len(fixtures)) if fixtures else 5.0
+            base_score = 10 - (difficulty_sum / len(fixtures)) if fixtures else 5.0
+
+            # Apply DGW bonus
+            team_status = self._special_gameweeks.get(player.team_id, "normal")
+            if team_status == "dgw":
+                base_score *= 1.5
+
+            return base_score
         else:
             return float(player.ep_next or 0)
 
@@ -280,7 +314,9 @@ class TransferOptimizer:
 
         return "; ".join(parts)
 
-    def _generate_notes(self, recommendations: list[TransferRecommendation]) -> list[str]:
+    def _generate_notes(
+        self, recommendations: list[TransferRecommendation], use_wildcard: bool = False
+    ) -> list[str]:
         """Generate strategic notes about the transfer plan."""
         notes = []
 
@@ -293,4 +329,31 @@ class TransferOptimizer:
             if any(r.priority == 1 for r in recommendations):
                 notes.append("High-priority changes identified")
 
+            if use_wildcard:
+                notes.append("⚡ WILDCARD RECOMMENDED: 3+ changes detected (total gain > 5pts)")
+                notes.append("Using Wildcard chip allows unlimited transfers with no penalty")
+
         return notes
+
+    def _detect_special_gameweeks(self) -> dict[int, str]:
+        """Detect double gameweeks (DGW) and blank gameweeks (BGW).
+
+        Returns:
+            Dict mapping team_id -> "dgw", "bgw", or "normal".
+        """
+        gameweek_status = {}
+        fixture_count = {}
+
+        for fixture in self._fixtures:
+            fixture_count[fixture.team_h] = fixture_count.get(fixture.team_h, 0) + 1
+            fixture_count[fixture.team_a] = fixture_count.get(fixture.team_a, 0) + 1
+
+        for team_id, count in fixture_count.items():
+            if count == 2:
+                gameweek_status[team_id] = "dgw"
+            elif count == 0:
+                gameweek_status[team_id] = "bgw"
+            else:
+                gameweek_status[team_id] = "normal"
+
+        return gameweek_status

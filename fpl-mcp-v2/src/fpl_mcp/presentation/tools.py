@@ -9,7 +9,14 @@ from mcp.server.fastmcp import FastMCP
 
 from fpl_mcp.infrastructure.credentials import SecureCredentialManager
 from fpl_mcp.presentation.resources import ServiceContainer
-from fpl_mcp.services import TeamManagementService, TransferOptimizer
+from fpl_mcp.services import (
+    TeamManagementService,
+    TransferOptimizer,
+    GameweekService,
+    OwnershipService,
+    SquadGenerator,
+    MonteCarloSimulator,
+)
 from fpl_mcp.utils.params import unwrap
 from fpl_mcp.utils.position_utils import normalize_position
 
@@ -1130,6 +1137,212 @@ def register_tools(mcp: FastMCP, services: ServiceContainer) -> None:
         except Exception as exc:
             logger.exception("Tool error: analyze_transfer_impact")
             return {"error": f"Failed to analyze transfer impact: {exc}"}
+
+
+    @mcp.tool()
+    async def generate_optimal_squads_contrarian(
+        count: int = 100,
+        gameweek_id: int | None = None,
+        contrarian_mode: bool = True,
+    ) -> dict:
+        """Generate optimal squads with contrarian mode (fade high-ownership).
+
+        Args:
+            count: Number of squads to generate (100-1000).
+            gameweek_id: Gameweek (None = next).
+            contrarian_mode: If True, fades heavily-owned players (30% penalty).
+
+        Returns:
+            List of 100 valid squads optimized for differential edge.
+        """
+        try:
+            logger.info(
+                "Tool call: generate_optimal_squads_contrarian with count=%d, contrarian=%s",
+                count,
+                contrarian_mode,
+            )
+            all_players = await services.player_repo.get_all()
+            fixtures = await services.fixture_repo.get_by_gameweek(gameweek_id or 1)
+
+            # Detect special gameweeks
+            special_gws = GameweekService.detect_special_gameweeks(
+                fixtures, {t.id: t for t in await services.bootstrap_repo.get_teams()}
+            )
+
+            generator = SquadGenerator(
+                all_players,
+                seed=42,
+                contrarian_mode=contrarian_mode,
+                special_gameweeks=special_gws,
+            )
+            squads = generator.generate_multiple_squads(count=min(count, 1000))
+
+            differential_picks = OwnershipService.identify_differential_picks(
+                [p for squad in squads for p in squad],
+                avg_ownership=25.0,
+            )
+
+            return {
+                "generated": len(squads),
+                "contrarian_mode": contrarian_mode,
+                "special_gameweeks": special_gws,
+                "top_differentials": differential_picks[:10],
+                "notes": [
+                    "Heavily-owned players penalized by 30% in scoring",
+                    f"Found {len(differential_picks)} players under 25% ownership",
+                    "Use these squads for head-to-head or mini-leagues",
+                ],
+            }
+        except Exception as exc:
+            logger.exception("Tool error: generate_optimal_squads_contrarian")
+            return {"error": f"Failed to generate contrarian squads: {exc}"}
+
+    @mcp.tool()
+    async def get_gameweek_special_status(
+        gameweek_id: int | None = None,
+    ) -> dict:
+        """Detect double gameweeks (DGW) and blank gameweeks (BGW).
+
+        Args:
+            gameweek_id: Gameweek number (None = next).
+
+        Returns:
+            Teams and their special gameweek status.
+        """
+        try:
+            logger.info("Tool call: get_gameweek_special_status")
+            fixtures = await services.fixture_repo.get_by_gameweek(gameweek_id or 1)
+            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
+
+            special_gws = GameweekService.detect_special_gameweeks(fixtures, teams)
+
+            dgw_teams = [teams[tid].name for tid, status in special_gws.items() if status == "dgw"]
+            bgw_teams = [teams[tid].name for tid, status in special_gws.items() if status == "bgw"]
+
+            return {
+                "gameweek": gameweek_id or 1,
+                "double_gameweek_teams": dgw_teams,
+                "blank_gameweek_teams": bgw_teams,
+                "strategy": {
+                    "dgw": "Target DGW team players for 1.5x opportunity",
+                    "bgw": "Avoid BGW teams entirely; use as transfers out",
+                },
+            }
+        except Exception as exc:
+            logger.exception("Tool error: get_gameweek_special_status")
+            return {"error": f"Failed to get gameweek status: {exc}"}
+
+    @mcp.tool()
+    async def suggest_transfers_advanced(
+        team_id: int,
+        num_transfers: int = 1,
+        contrarian_mode: bool = False,
+        auto_wildcard: bool = True,
+    ) -> dict:
+        """Advanced transfer suggestions with DGW/BGW, contrarian, and auto-wildcard.
+
+        Args:
+            team_id: Manager's team ID.
+            num_transfers: Changes to suggest (1-3).
+            contrarian_mode: Fade high-ownership players.
+            auto_wildcard: Auto-suggest wildcard if 3+ changes needed.
+
+        Returns:
+            Transfer recommendations with wildcard detection.
+        """
+        try:
+            logger.info("Tool call: suggest_transfers_advanced")
+            team_mgmt = TeamManagementService(services.auth_service, services.player_repo)
+            current = await team_mgmt.get_current_team(team_id)
+
+            all_players = await services.player_repo.get_all()
+            fixtures = await services.fixture_repo.get_by_gameweek(current.gameweek)
+            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
+
+            # Detect special gameweeks
+            special_gws = GameweekService.detect_special_gameweeks(fixtures, teams)
+
+            optimizer = TransferOptimizer(
+                all_players,
+                fixtures,
+                teams,
+                contrarian_mode=contrarian_mode,
+            )
+            recommendations = optimizer.suggest_transfers(
+                current.players,
+                num_transfers=num_transfers,
+                budget_available=current.bank,
+                priority="points",
+                auto_detect_wildcard=auto_wildcard,
+            )
+
+            return {
+                "team_id": team_id,
+                "gameweek": current.gameweek,
+                "special_gameweek_status": special_gws,
+                "transfers": [
+                    {
+                        "out": r.out_player.web_name,
+                        "in": r.in_player.web_name,
+                        "reason": r.reason,
+                        "projected_gain": f"{r.projected_change:.1f}pts",
+                        "cost": f"£{r.cost_delta:.1f}m",
+                        "priority": r.priority,
+                    }
+                    for r in recommendations.recommendations
+                ],
+                "total_cost": f"£{recommendations.total_cost:.1f}m",
+                "total_gain": f"{recommendations.total_projected_gain:.1f}pts",
+                "use_wildcard": recommendations.use_wildcard,
+                "notes": recommendations.notes,
+            }
+        except Exception as exc:
+            logger.exception("Tool error: suggest_transfers_advanced")
+            return {"error": f"Failed to suggest advanced transfers: {exc}"}
+
+    @mcp.tool()
+    async def identify_differential_picks(
+        team_id: int | None = None,
+        gameweek_id: int | None = None,
+        ownership_threshold: float = 25.0,
+    ) -> dict:
+        """Find low-ownership players with high upside (differentials).
+
+        Args:
+            team_id: Optional; if provided, excludes current squad.
+            gameweek_id: Gameweek number.
+            ownership_threshold: Max ownership % for differential (default 25%).
+
+        Returns:
+            List of low-ownership, high-upside players.
+        """
+        try:
+            logger.info("Tool call: identify_differential_picks")
+            all_players = await services.player_repo.get_all()
+
+            # Exclude current squad if team_id provided
+            if team_id:
+                team_mgmt = TeamManagementService(services.auth_service, services.player_repo)
+                current = await team_mgmt.get_current_team(team_id)
+                current_ids = {p.id for p in current.players}
+                candidates = [p for p in all_players if p.id not in current_ids]
+            else:
+                candidates = all_players
+
+            differentials = OwnershipService.identify_differential_picks(
+                candidates, avg_ownership=ownership_threshold
+            )
+
+            return {
+                "gameweek": gameweek_id or 1,
+                "threshold": f"{ownership_threshold}%",
+                "differentials": differentials[:20],
+                "total_found": len(differentials),
+                "strategy": "Target these for head-to-head advantage",
+            }
+        except Exception as exc:
+            logger.exception("Tool error: identify_differential_picks")
+            return {"error": f"Failed to identify differentials: {exc}"}
 
 
 def _position_name(element_type: int) -> str:

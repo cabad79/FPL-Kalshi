@@ -15,9 +15,17 @@ logger = logging.getLogger(__name__)
 class SquadGenerator:
     """Generate valid FPL squads using constraint satisfaction."""
 
-    def __init__(self, all_players: list[Player], seed: int | None = None):
+    def __init__(
+        self,
+        all_players: list[Player],
+        seed: int | None = None,
+        contrarian_mode: bool = False,
+        special_gameweeks: dict[int, str] | None = None,
+    ):
         self._all_players = [p for p in all_players if p.status == "a"]
         self._players_by_position = self._organize_by_position()
+        self._contrarian_mode = contrarian_mode
+        self._special_gameweeks = special_gameweeks or {}
         if seed is not None:
             random.seed(seed)
 
@@ -29,9 +37,31 @@ class SquadGenerator:
 
         # Sort each position by expected points (descending)
         for pos in by_pos:
-            by_pos[pos].sort(key=lambda p: float(p.ep_next or 0), reverse=True)
+            by_pos[pos].sort(
+                key=lambda p: self._score_player_for_sort(p),
+                reverse=True
+            )
 
         return by_pos
+
+    def _score_player_for_sort(self, player: Player) -> float:
+        """Score player for squad generation considering all factors."""
+        ep = float(player.ep_next or 0)
+
+        # DGW bonus
+        team_status = self._special_gameweeks.get(player.team_id, "normal")
+        if team_status == "dgw":
+            ep *= 1.5
+        elif team_status == "bgw":
+            ep *= 0.0
+
+        # Contrarian ownership fading
+        if self._contrarian_mode:
+            ownership = float(player.selected_by_percent or 0)
+            ownership_factor = 1.0 - ((ownership / 100) * 0.3)
+            ep *= max(ownership_factor, 0.5)
+
+        return ep
 
     def generate_squad(self, strategy: str = "balanced") -> list[Player]:
         """Generate a single valid squad.

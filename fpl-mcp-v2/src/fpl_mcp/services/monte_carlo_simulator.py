@@ -33,10 +33,17 @@ class SimulationResult:
 class MonteCarloSimulator:
     """Simulate FPL squad performance across multiple gameweeks using Monte Carlo."""
 
-    def __init__(self, fixtures: list[Fixture], teams: dict[int, Team], seed: int | None = None):
+    def __init__(
+        self,
+        fixtures: list[Fixture],
+        teams: dict[int, Team],
+        seed: int | None = None,
+        special_gameweeks: dict[int, str] | None = None,
+    ):
         self._fixtures = fixtures
         self._teams = teams
         self._difficulty_bonus = {1: 1.0, 2: 0.95, 3: 0.85, 4: 0.75, 5: 0.65}
+        self._special_gameweeks = special_gameweeks or self._detect_special_gameweeks()
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
@@ -84,11 +91,19 @@ class MonteCarloSimulator:
             # Base expected points
             ep = float(player.ep_next or 0)
 
-            # Fixture difficulty bonus/penalty
-            fixture_info = self._get_fixture_info(player.team_id)
-            if fixture_info:
-                _, difficulty = fixture_info
-                ep *= self._difficulty_bonus.get(difficulty, 0.85)
+            # DGW/BGW adjustment
+            team_status = self._special_gameweeks.get(player.team_id, "normal")
+            if team_status == "dgw":
+                ep *= 1.5  # Double gameweek bonus
+            elif team_status == "bgw":
+                ep = 0.0  # Blank gameweek
+
+            # Fixture difficulty bonus/penalty (only for normal gameweeks)
+            if team_status != "bgw":
+                fixture_info = self._get_fixture_info(player.team_id)
+                if fixture_info:
+                    _, difficulty = fixture_info
+                    ep *= self._difficulty_bonus.get(difficulty, 0.85)
 
             # Form variance
             form = float(player.form or 0)
@@ -110,6 +125,25 @@ class MonteCarloSimulator:
             total += player_score
 
         return total
+
+    def _detect_special_gameweeks(self) -> dict[int, str]:
+        """Detect double gameweeks (DGW) and blank gameweeks (BGW)."""
+        gameweek_status = {}
+        fixture_count = {}
+
+        for fixture in self._fixtures:
+            fixture_count[fixture.team_h] = fixture_count.get(fixture.team_h, 0) + 1
+            fixture_count[fixture.team_a] = fixture_count.get(fixture.team_a, 0) + 1
+
+        for team_id, count in fixture_count.items():
+            if count == 2:
+                gameweek_status[team_id] = "dgw"
+            elif count == 0:
+                gameweek_status[team_id] = "bgw"
+            else:
+                gameweek_status[team_id] = "normal"
+
+        return gameweek_status
 
     def _get_fixture_info(self, team_id: int) -> tuple[str, int] | None:
         """Get fixture difficulty for a team."""

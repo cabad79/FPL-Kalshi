@@ -10,6 +10,12 @@ from fpl_mcp.services.squad_generator import SquadGenerator
 from fpl_mcp.services.monte_carlo_simulator import MonteCarloSimulator, SimulationResult
 from fpl_mcp.services.team_management import TeamManagementService, CurrentTeam, WildcardChip
 from fpl_mcp.services.transfer_optimizer import TransferOptimizer, TransferRecommendation, TransferSet
+from fpl_mcp.services.external_data import (
+    UnderstatService,
+    RedditService,
+    OwnershipService,
+    GameweekService,
+)
 
 __all__ = [
     "PlayerService",
@@ -28,4 +34,8 @@ __all__ = [
     "TransferOptimizer",
     "TransferRecommendation",
     "TransferSet",
+    "UnderstatService",
+    "RedditService",
+    "OwnershipService",
+    "GameweekService",
 ]
