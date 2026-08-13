@@ -1,0 +1,89 @@
+# Docker Compose - MCP Kalshi + FPL (Entorno de Pruebas)
+# Uso: docker-compose up --build
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # KALSHI MCP
+  # ═══════════════════════════════════════════════════════════════
+  kalshi-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kalshi-mcp:local
+    container_name: kalshi-mcp-demo
+    
+    environment:
+      - KALSHI_ENV=demo
+      - KALSHI_KEY_ID=${KALSHI_KEY_ID:-}
+      - KALSHI_PRIVATE_KEY_PATH=/app/.kalshi/private-key.pem
+      - MCP_SERVER_NAME=kalshi-dev-mcp
+    
+    volumes:
+      - ./.kalshi/private-key.pem:/app/.kalshi/private-key.pem:ro
+      - ./.env:/app/.env:ro
+      - ./logs:/app/logs
+    
+    stdin_open: true
+    tty: true
+    
+    networks:
+      - mcp-net
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    restart: unless-stopped
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ═══════════════════════════════════════════════════════════════
+  # FPL MCP v2 (propio, fpl-mcp-v2/)
+  # ═══════════════════════════════════════════════════════════════
+  fpl-mcp:
+    build:
+      context: ./fpl-mcp-v2
+      dockerfile: Dockerfile
+    image: fpl-mcp-v2:local
+    container_name: fpl-mcp-demo
+
+    environment:
+      # Datos públicos (jugadores, fixtures, gameweeks) no requieren credenciales.
+      # Features autenticadas (mi equipo, ligas) requieren un client id real.
+      - FPL_OIDC_CLIENT_ID=${FPL_OIDC_CLIENT_ID:-}
+
+    stdin_open: true
+    tty: true
+    
+    networks:
+      - mcp-net
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    
+    restart: unless-stopped
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  mcp-net:
+    driver: bridge

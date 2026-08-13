@@ -1,0 +1,22 @@
+# Secrets / credentials
+.env
+.kalshi/*.pem
+.kalshi/*.key
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+logs/*.log
+
+# OS
+.DS_Store
+Thumbs.db
