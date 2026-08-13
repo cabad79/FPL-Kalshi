@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 
 from fpl_mcp.infrastructure.credentials import SecureCredentialManager
 from fpl_mcp.presentation.resources import ServiceContainer
+from fpl_mcp.services import TeamManagementService, TransferOptimizer
 from fpl_mcp.utils.params import unwrap
 from fpl_mcp.utils.position_utils import normalize_position
 
@@ -906,6 +907,229 @@ def register_tools(mcp: FastMCP, services: ServiceContainer) -> None:
         except Exception as exc:
             logger.exception("Tool error: get_fixture_detail")
             return {"error": f"Failed to get fixture details: {exc}"}
+
+
+    @mcp.tool()
+    async def get_current_team(
+        team_id: int,
+        gameweek: int | None = None,
+    ) -> dict:
+        """Load current squad, captain, available transfers, and chip status.
+
+        Args:
+            team_id: Manager's team ID.
+            gameweek: Gameweek number (None = current).
+
+        Returns:
+            Current team state with squad, captain, bank, transfers available.
+        """
+        try:
+            logger.info("Tool call: get_current_team with team_id=%d", team_id)
+            team_mgmt = TeamManagementService(services.auth_service, services.player_repo)
+            current = await team_mgmt.get_current_team(team_id, gameweek)
+
+            return {
+                "team_id": current.team_id,
+                "gameweek": current.gameweek,
+                "squad": [
+                    {
+                        "id": p.id,
+                        "name": p.web_name,
+                        "position": _position_name(p.element_type),
+                        "price": p.price_millions,
+                        "ep_next": float(p.ep_next or 0),
+                    }
+                    for p in current.players
+                ],
+                "captain": next((p.web_name for p in current.players if p.id == current.captain_id), "Not set"),
+                "vice_captain": next((p.web_name for p in current.players if p.id == current.vice_captain_id), "Not set"),
+                "squad_value": f"£{current.squad_cost:.1f}m",
+                "bank": f"£{current.bank:.1f}m",
+                "transfers_available": current.transfers_available,
+                "transfers_used": current.transfers_used,
+                "chips": {
+                    "bench_boost": current.bench_boost_active,
+                    "triple_captain": current.triple_captain_active,
+                    "wildcard": current.wildcard_active,
+                    "free_hit": current.free_hit_active,
+                },
+            }
+        except Exception as exc:
+            logger.exception("Tool error: get_current_team")
+            return {"error": f"Failed to get current team: {exc}"}
+
+    @mcp.tool()
+    async def get_team_transfers(
+        team_id: int,
+        limit: int = 10,
+    ) -> dict:
+        """Get transfer history and analysis.
+
+        Args:
+            team_id: Manager's team ID.
+            limit: Number of recent transfers to show.
+
+        Returns:
+            Transfer history with player details and costs.
+        """
+        try:
+            logger.info("Tool call: get_team_transfers with team_id=%d", team_id)
+            team_mgmt = TeamManagementService(services.auth_service, services.player_repo)
+            transfers = await team_mgmt.get_transfer_history(team_id, limit)
+
+            return {
+                "team_id": team_id,
+                "total_transfers": len(transfers),
+                "transfers": [
+                    {
+                        "gameweek": t["gameweek"],
+                        "out": t["transferred_out"]["name"],
+                        "in": t["transferred_in"]["name"],
+                        "entry_cost": f"£{t['entry_cost']:.1f}m",
+                    }
+                    for t in transfers
+                ],
+            }
+        except Exception as exc:
+            logger.exception("Tool error: get_team_transfers")
+            return {"error": f"Failed to get transfers: {exc}"}
+
+    @mcp.tool()
+    async def get_available_chips(
+        team_id: int,
+        gameweek: int | None = None,
+    ) -> dict:
+        """Get list of available wildcard chips.
+
+        Args:
+            team_id: Manager's team ID.
+            gameweek: Gameweek number (None = current).
+
+        Returns:
+            Available chips with descriptions.
+        """
+        try:
+            logger.info("Tool call: get_available_chips with team_id=%d", team_id)
+            team_mgmt = TeamManagementService(services.auth_service, services.player_repo)
+            current = await team_mgmt.get_current_team(team_id, gameweek)
+            chips = team_mgmt.get_available_chips(current)
+
+            return {
+                "team_id": team_id,
+                "gameweek": current.gameweek,
+                "available": [
+                    {
+                        "name": c.name,
+                        "description": c.description,
+                    }
+                    for c in chips
+                ],
+            }
+        except Exception as exc:
+            logger.exception("Tool error: get_available_chips")
+            return {"error": f"Failed to get available chips: {exc}"}
+
+    @mcp.tool()
+    async def suggest_transfers(
+        team_id: int,
+        num_transfers: int = 1,
+        priority: str = "points",
+    ) -> dict:
+        """Suggest optimal transfers for next gameweek.
+
+        Args:
+            team_id: Manager's team ID.
+            num_transfers: Number of changes (1-3).
+            priority: Optimization metric ('points', 'form', 'fixtures').
+
+        Returns:
+            Transfer recommendations with projected gains.
+        """
+        try:
+            logger.info("Tool call: suggest_transfers with team_id=%d, num=%d", team_id, num_transfers)
+            team_mgmt = TeamManagementService(services.auth_service, services.player_repo)
+            current = await team_mgmt.get_current_team(team_id)
+
+            all_players = await services.player_repo.get_all()
+            fixtures = await services.fixture_repo.get_by_gameweek(current.gameweek)
+            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
+
+            optimizer = TransferOptimizer(all_players, fixtures, teams)
+            recommendations = optimizer.suggest_transfers(
+                current.players,
+                num_transfers=num_transfers,
+                budget_available=current.bank,
+                priority=priority,
+            )
+
+            return {
+                "team_id": team_id,
+                "gameweek": current.gameweek,
+                "transfers": [
+                    {
+                        "out": r.out_player.web_name,
+                        "in": r.in_player.web_name,
+                        "reason": r.reason,
+                        "projected_gain": f"{r.projected_change:.1f}pts",
+                        "cost": f"£{r.cost_delta:.1f}m",
+                        "priority": r.priority,
+                    }
+                    for r in recommendations.recommendations
+                ],
+                "total_cost": f"£{recommendations.total_cost:.1f}m",
+                "total_gain": f"{recommendations.total_projected_gain:.1f}pts",
+                "notes": recommendations.notes,
+            }
+        except Exception as exc:
+            logger.exception("Tool error: suggest_transfers")
+            return {"error": f"Failed to suggest transfers: {exc}"}
+
+    @mcp.tool()
+    async def analyze_transfer_impact(
+        team_id: int,
+        player_ids_in: list[int],
+        player_ids_out: list[int],
+        captain_id: int | None = None,
+    ) -> dict:
+        """Analyze cost and point impact of proposed transfers.
+
+        Args:
+            team_id: Manager's team ID.
+            player_ids_in: IDs of players to bring in.
+            player_ids_out: IDs of players to remove.
+            captain_id: New captain ID.
+
+        Returns:
+            Transfer impact analysis with cost and projection.
+        """
+        try:
+            logger.info("Tool call: analyze_transfer_impact")
+            team_mgmt = TeamManagementService(services.auth_service, services.player_repo)
+            current = await team_mgmt.get_current_team(team_id)
+
+            # Build new squad
+            current_ids = {p.id for p in current.players}
+            new_ids = (current_ids - set(player_ids_out)) | set(player_ids_in)
+
+            all_players = await services.player_repo.get_all()
+            new_squad = [p for p in all_players if p.id in new_ids]
+
+            impact = team_mgmt.calculate_transfer_impact(current.players, new_squad, captain_id)
+
+            return {
+                "team_id": team_id,
+                "transfers": impact["transfers"],
+                "players_out": impact["out"],
+                "players_in": impact["in"],
+                "sell_value": impact["sell_value"],
+                "buy_cost": impact["buy_cost"],
+                "net_cost": impact["net_cost"],
+                "new_captain": impact["new_captain"],
+                "feasible": impact["net_cost"] <= current.bank,
+            }
+        except Exception as exc:
+            logger.exception("Tool error: analyze_transfer_impact")
+            return {"error": f"Failed to analyze transfer impact: {exc}"}
 
 
 def _position_name(element_type: int) -> str:

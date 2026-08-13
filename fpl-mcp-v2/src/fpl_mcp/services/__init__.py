@@ -8,6 +8,8 @@ from fpl_mcp.services.live_service import LiveService
 from fpl_mcp.services.squad_validator import SquadValidator, SquadValidationError
 from fpl_mcp.services.squad_generator import SquadGenerator
 from fpl_mcp.services.monte_carlo_simulator import MonteCarloSimulator, SimulationResult
+from fpl_mcp.services.team_management import TeamManagementService, CurrentTeam, WildcardChip
+from fpl_mcp.services.transfer_optimizer import TransferOptimizer, TransferRecommendation, TransferSet
 
 __all__ = [
     "PlayerService",
@@ -20,4 +22,10 @@ __all__ = [
     "SquadGenerator",
     "MonteCarloSimulator",
     "SimulationResult",
+    "TeamManagementService",
+    "CurrentTeam",
+    "WildcardChip",
+    "TransferOptimizer",
+    "TransferRecommendation",
+    "TransferSet",
 ]
