@@ -644,6 +644,169 @@ def register_tools(mcp: FastMCP, services: ServiceContainer) -> None:
             return {"error": f"Failed to update credentials: {exc}"}
 
     # ------------------------------------------------------------------ #
+    # Squad Optimization & Monte Carlo
+    # ------------------------------------------------------------------ #
+
+    @mcp.tool()
+    async def validate_squad(player_ids: list[int]) -> dict[str, Any]:
+        """Validate a proposed squad against all FPL rules.
+
+        Args:
+            player_ids: List of 15 FPL player IDs.
+        """
+        try:
+            logger.info("Tool call: validate_squad with %d players", len(player_ids))
+            if len(player_ids) != 15:
+                return {"error": f"Squad must have 15 players, got {len(player_ids)}"}
+
+            all_players = await services.player_repo.get_all()
+            players_by_id = {p.id: p for p in all_players}
+
+            squad = []
+            for pid in player_ids:
+                if pid not in players_by_id:
+                    return {"error": f"Player ID {pid} not found"}
+                squad.append(players_by_id[pid])
+
+            from fpl_mcp.services import SquadValidator
+
+            result = SquadValidator.validate_squad(squad)
+            return {
+                "valid": result["valid"],
+                "budget_remaining": result["budget_remaining"],
+                "total_price": sum(p.price_millions for p in squad),
+            }
+        except Exception as exc:
+            logger.exception("Tool error: validate_squad")
+            return {"error": str(exc)}
+
+    @mcp.tool()
+    async def generate_optimal_squads(count: int = 100, gameweek_id: int | None = None) -> dict[str, Any]:
+        """Generate multiple optimal FPL squads using constraint satisfaction.
+
+        Args:
+            count: Number of squads to generate (max 1000).
+            gameweek_id: Gameweek to optimize for (uses GW1 if omitted).
+        """
+        try:
+            logger.info("Tool call: generate_optimal_squads with count=%d", min(count, 1000))
+            count = min(count, 1000)
+
+            all_players = await services.player_repo.get_all()
+
+            from fpl_mcp.services import SquadGenerator
+
+            generator = SquadGenerator(all_players)
+            squads = generator.generate_multiple_squads(count=count)
+
+            return {
+                "generated_count": len(squads),
+                "squads_summary": [
+                    {
+                        "avg_price": sum(p.price_millions for p in squad) / 15,
+                        "players": [p.web_name for p in squad],
+                    }
+                    for squad in squads[:10]  # Return first 10 for preview
+                ],
+            }
+        except Exception as exc:
+            logger.exception("Tool error: generate_optimal_squads")
+            return {"error": str(exc)}
+
+    @mcp.tool()
+    async def simulate_squad_performance(
+        player_ids: list[int], captain_id: int | None = None, iterations: int = 100, gameweek_id: int | None = None
+    ) -> dict[str, Any]:
+        """Run Monte Carlo simulation (100+ iterations) on a squad to predict expected GW points.
+
+        Args:
+            player_ids: List of 15 player IDs in the squad.
+            captain_id: Player ID of the captain (auto-select if None).
+            iterations: Number of simulations (default 100).
+            gameweek_id: Gameweek to simulate (uses GW1 if omitted).
+        """
+        try:
+            logger.info(
+                "Tool call: simulate_squad_performance with %d players, %d iterations", len(player_ids), iterations
+            )
+
+            all_players = await services.player_repo.get_all()
+            players_by_id = {p.id: p for p in all_players}
+
+            squad = [players_by_id[pid] for pid in player_ids if pid in players_by_id]
+            if len(squad) != 15:
+                return {"error": f"Squad must have exactly 15 players, got {len(squad)}"}
+
+            fixtures = await services.fixture_repo.get_by_gameweek(gameweek_id or 1)
+            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
+
+            from fpl_mcp.services import MonteCarloSimulator
+
+            simulator = MonteCarloSimulator(fixtures, teams)
+            result = simulator.simulate_squad(squad, captain_id, iterations=min(iterations, 1000))
+
+            return {
+                "squad_id": result.squad_id,
+                "captain": result.captain_player.web_name if result.captain_player else None,
+                "expected_points_avg": round(result.avg_score, 2),
+                "expected_points_p10": round(result.p10_score, 2),
+                "expected_points_p90": round(result.p90_score, 2),
+                "iterations": iterations,
+                "message": f"Expected {result.avg_score:.1f} pts (p10={result.p10_score:.1f}, p90={result.p90_score:.1f})",
+            }
+        except Exception as exc:
+            logger.exception("Tool error: simulate_squad_performance")
+            return {"error": str(exc)}
+
+    @mcp.tool()
+    async def rank_squads_by_simulation(squad_list: list[list[int]], iterations: int = 100) -> dict[str, Any]:
+        """Simulate multiple squads and rank them by expected performance.
+
+        Args:
+            squad_list: List of squads, each squad is a list of 15 player IDs.
+            iterations: Monte Carlo iterations per squad.
+        """
+        try:
+            logger.info("Tool call: rank_squads_by_simulation with %d squads", len(squad_list))
+
+            all_players = await services.player_repo.get_all()
+            players_by_id = {p.id: p for p in all_players}
+
+            squads = []
+            for squad_ids in squad_list[:50]:  # Limit to 50 squads
+                squad = [players_by_id[pid] for pid in squad_ids if pid in players_by_id]
+                if len(squad) == 15:
+                    squads.append(squad)
+
+            if not squads:
+                return {"error": "No valid squads found"}
+
+            fixtures = await services.fixture_repo.get_by_gameweek(1)
+            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
+
+            from fpl_mcp.services import MonteCarloSimulator
+
+            simulator = MonteCarloSimulator(fixtures, teams)
+            results = simulator.compare_squads(squads, iterations=min(iterations, 500))
+
+            return {
+                "total_squads": len(results),
+                "top_3": [
+                    {
+                        "rank": i + 1,
+                        "expected_points": round(r.avg_score, 2),
+                        "p10": round(r.p10_score, 2),
+                        "p90": round(r.p90_score, 2),
+                        "captain": r.captain_player.web_name if r.captain_player else None,
+                    }
+                    for i, r in enumerate(results[:3])
+                ],
+            }
+        except Exception as exc:
+            logger.exception("Tool error: rank_squads_by_simulation")
+            return {"error": str(exc)}
+
+    # ------------------------------------------------------------------ #
     # Live / Real-time
     # ------------------------------------------------------------------ #
 
