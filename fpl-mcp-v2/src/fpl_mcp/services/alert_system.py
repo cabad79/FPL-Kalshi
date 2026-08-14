@@ -59,10 +59,10 @@ class ScheduledTask:
     task_name: str
     description: str
     scheduled_time: datetime
+    priority: int = 3
     gameweek: int | None = None
-    priority: int  # 1=critical, 2=high, 3=normal
     action: Callable | None = None
-    status: str = "pending"  # pending, running, completed, failed
+    status: str = "pending"
 
 
 class AlertSystem:

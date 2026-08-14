@@ -1,0 +1,739 @@
+
+================================================================================
+PAGE 1
+================================================================================
+Soccer Analytics 
+with Machine 
+Learning
+Learning Predictive Modeling Techniques 
+with Sports Data
+Haipeng Gao, Ari Joury, 
+Weining Shen & Guanyu Hu 
+
+
+================================================================================
+PAGE 2
+================================================================================
+ISBN:     978-1-098-18111-6
+US $59.99	   CAN $74.99
+DATA SCIENCE
+Struggling to grasp machine learning concepts or unsure how 
+to apply them in the real world? This book aims to change 
+that by using the world’s most popular game—soccer—to 
+illuminate key concepts in predictive modeling and data 
+science. You’ll develop a solid foundation in machine learning 
+through engaging examples that bridge academic principles 
+with practical applications.
+Written by experts in both machine learning and sports 
+analytics, this practical Python-focused guide introduces 
+fundamental data science techniques using real soccer data. 
+Ideal for students, analysts, and soccer fans alike, it offers 
+instructions on models and techniques such as logistic 
+regression, random forests, deep learning, simulations, and 
+feature engineering. But instead of memorizing algorithms, 
+you’ll learn by building predictive models to analyze match 
+outcomes, test betting strategies, run simulated game 
+scenarios, and more.
+•	 Understand machine learning concepts by 
+working with real sports data
+•	 Develop, refine, and evaluate machine learning 
+models, using Python for data analysis
+•	 Carry out detailed analyses and research on soccer 
+game predictions and betting strategies to surface 
+valuable insights
+•	 Apply the skills you learn to predictive modeling 
+scenarios in other industries
+Haipeng Gao is a data science and 
+machine learning expert with 
+extensive industry experience 
+building and optimizing large-scale 
+machine learning solutions at leading 
+technology companies, including 
+LinkedIn, TikTok, and PayPal.
+Ari Joury is a data scientist and 
+entrepreneur working at the 
+intersection of machine learning, 
+causal inference, and applied 
+analytics. He is founder and CEO of 
+Wangari Global, where he builds 
+AI systems for decision support in 
+finance, insurance, and sustainability.
+Weining Shen is an associate 
+professor of statistics at the 
+University of California, Irvine. 
+His research focuses on machine 
+learning, Bayesian statistics, sports 
+analytics, and large language models.
+Guanyu Hu is an associate professor 
+at Michigan State University. His 
+research focuses on spatial statistics, 
+Bayesian nonparametric methods, 
+and sports analytics.
+Soccer Analytics with Machine Learning
+“An engaging, practical guide that combines soccer passion with 
+modern machine learning. This book will help readers turn real 
+match data into meaningful insights and predictive models.”
+	 Alexander Aue
+Professor of statistics, University of California, Davis
+
+
+================================================================================
+PAGE 3
+================================================================================
+Praise for Soccer Analytics with Machine Learning
+Data is everywhere, and this book proves it. While the beautiful game is loved
+the world over, few have dared to apply the rigorous scalpel of data analysis to such a
+complex environment, until now. This is a fantastic resource. The insights are accessible,
+the examples are clear, and the methods are immediately applicable across the field.
+A must-read for anyone looking to bridge the gap between soccer and machine learning.
+—Otu Ekanem, CTO, Kanopy AM
+Few books manage to be genuinely useful to both the soccer obsessive
+and the machine learning practitioner. This one is. From expected goals
+to ensemble methods, it covers the field with clarity, honesty about uncertainty,
+and a deep appreciation for the game itself.
+—Matteus Tanha, AI consultant
+Finally a book that teaches machine learning the way science actually works:
+on real, messy data, building the judgment to know when and how models work,
+not just the skills to build them.
+—Louis Delloye, senior R&D strategy analyst, Sanofi
+An engaging, practical guide that combines soccer passion
+with modern machine learning. This book will help readers turn
+real match data into meaningful insights and predictive models.
+—Alexander Aue, professor of statistics,
+University of California, Davis
+
+
+================================================================================
+PAGE 4
+================================================================================
+
+
+================================================================================
+PAGE 5
+================================================================================
+Haipeng Gao, Ari Joury, Weining Shen, and Guanyu Hu
+Soccer Analytics with
+Machine Learning
+Learning Predictive Modeling Techniques
+with Sports Data
+
+
+================================================================================
+PAGE 6
+================================================================================
+978-1-098-18111-6
+[LSI]
+Soccer Analytics with Machine Learning
+by Haipeng Gao, Ari Joury, Weining Shen, and Guanyu Hu
+Copyright © 2026 Haipeng Gao, Ari Joury, Weining Shen, and Guanyu Hu. All rights reserved.
+Published by O’Reilly Media, Inc., 141 Stony Circle, Suite 195, Santa Rosa, CA 95401.
+O’Reilly books may be purchased for educational, business, or sales promotional use. Online editions are
+also available for most titles (http://oreilly.com). For more information, contact our corporate/institutional
+sales department: 800-998-9938 or corporate@oreilly.com.
+Acquisitions Editor: Michelle Smith
+Development Editor: Jeff Bleiel
+Production Editor: Clare Laylock
+Copyeditor: Sharon Wilkey
+Proofreader: Laura K. Miller
+Indexer: Krsta Technology Solutions
+Cover Designer: Susan Brown
+Cover Illustrator: Monica Kamsvaag
+Interior Designer: David Futato
+Interior Illustrator: Kate Dullea
+June 2026:
+ First Edition
+Revision History for the First Edition
+2026-06-15: First Release
+See http://oreilly.com/catalog/errata.csp?isbn=9781098181116 for release details.
+The O’Reilly logo is a registered trademark of O’Reilly Media, Inc. Soccer Analytics with Machine Learn‐
+ing, the cover image, and related trade dress are trademarks of O’Reilly Media, Inc.
+The views expressed in this work are those of the authors and do not represent the publisher’s views.
+While the publisher and the authors have used good faith efforts to ensure that the information and
+instructions contained in this work are accurate, the publisher and the authors disclaim all responsibility
+for errors or omissions, including without limitation responsibility for damages resulting from the use
+of or reliance on this work. Use of the information and instructions contained in this work is at your
+own risk. If any code samples or other technology this work contains or describes is subject to open
+source licenses or the intellectual property rights of others, it is your responsibility to ensure that your
+use thereof complies with such licenses and/or rights. This book is not intended as financial advice. Please
+consult a qualified professional if you require financial advice.
+
+
+================================================================================
+PAGE 7
+================================================================================
+Table of Contents
+Preface. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  xiii
+1. The Soccer Analytics Landscape. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  1
+The Problems That Soccer Analytics Helps Solve                                                         2
+Soccer Clubs: Making Decisions Across the Organization                                      2
+Betting Markets: Modeling Uncertainty and Pricing Outcomes                             4
+Fans and Analysts: Reading the Game Beyond the Scoreline                                  5
+The Data-Driven Evolution in Soccer                                                                             6
+From Outcomes to Process: The Limits of Traditional Analysis                            6
+The Data Revolution: From Event Logs to Tracking Systems                                 7
+Analytics in Practice: Metrics, Applications, and Scope                                           7
+Why Soccer Resists Easy Analysis                                                                                8
+A Framework for Soccer Analysis                                                                                   9
+The Three Types of Analysis                                                                                         9
+Data Sources for Modern Analysis                                                                            10
+From Player to League: Levels of Aggregation                                                         11
+Principles That Run Through Everything                                                                12
+Looking Ahead: A Guided Tour of the Book                                                               13
+Conclusion                                                                                                                        13
+2. Python Fundamentals: Building Your Analytics Toolkit. . . . . . . . . . . . . . . . . . . . . . . . . . .  15
+Python: The Language Behind Modern Analytics                                                      15
+Your Analytics Workspace: Setting Up the Environment                                          16
+Installation: Getting Python Ready                                                                           17
+Virtual Environments: Isolating Your Projects                                                        17
+Jupyter Notebook: Creating a Workspace for Interactive Analysis and More    20
+Repositories: Storing Your Project Files                                                                    22
+Python Basics: The Core Moves                                                                                    23
+v
+
+
+================================================================================
+PAGE 8
+================================================================================
+Primitive Data Types: Representing Basic Information                                         24
+Basic Operations: Working with Values and Comparisons                                   25
+Variable Assignment: Storing and Reusing Information                                       26
+Data Structures: Organizing Information                                                                27
+Conditional Statements: Writing Decision Rules                                                    32
+Loops: Repeating Computation Efficiently                                                              33
+List Comprehensions: Performing Compact and Pythonic Iteration                   35
+Functions: Providing Reusable Logic for Analysis                                                  36
+Looking Ahead: From Python Basics to Real Analysis                                              36
+Conclusion                                                                                                                        37
+3. Exploratory Data Analysis in Soccer. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  39
+Understanding Soccer Data Levels                                                                                40
+Match-Level Data                                                                                                         40
+Player-Level Data                                                                                                          40
+Event-Level Data                                                                                                          41
+What Is EDA in Soccer Analytics?                                                                                41
+Loading StatsBomb Soccer Data                                                                                    42
+Getting the Data                                                                                                           43
+Loading the Data                                                                                                          43
+Taking a First Look at the Data                                                                                  44
+Structured EDA by Data Types                                                                                      45
+Numerical Features: The Quantifiable Game                                                           45
+Categorical Features: The Qualitative Aspects                                                         49
+Ordinal Features: The Ordered Categories                                                              51
+Preliminary Exploration: Getting Your Bearings                                                        52
+Building Tournament DataFrames                                                                            53
+Counting the Frequency of Event Types                                                                   54
+Filtering: Passes by Player or Team                                                                            54
+Grouping: Per-Match Pass Summaries                                                                     54
+Aggregating: Shots, Goals, and xG by Team                                                            55
+Basic Data Cleaning for Soccer                                                                                      57
+Handling Missing Values                                                                                            57
+Standardizing Names                                                                                                   58
+Visualizing Soccer Data                                                                                                   59
+A Quick Note on Matplotlib and Seaborn                                                                59
+Bar Charts and Rankings                                                                                            60
+Histograms and Distributions                                                                                    61
+Boxplots and Variability                                                                                              63
+Time Series and Cumulative Plots                                                                             65
+Scatterplots: Shot Volume Versus Goals                                                                   66
+Soccer-Specific Visualizations with mplsoccer                                                            68
+vi 
+| 
+Table of Contents
+
+
+================================================================================
+PAGE 9
+================================================================================
+Pass Location Heatmaps                                                                                              68
+Advanced Pitch Visualizations: Passing Networks                                                  70
+Basic Pitch Visualizations                                                                                           71
+Advanced Heatmap Visualizations                                                                            73
+Case Study: Japan Women’s at the 2019 World Cup                                                   75
+Team-Level Overview                                                                                                  75
+Match Flow                                                                                                                    77
+Spatial Patterns                                                                                                             78
+Player-Level Insights                                                                                                    78
+Wrap-up of the Case Study                                                                                         80
+From EDA to Machine Learning                                                                                   80
+Features as Building Blocks                                                                                        81
+The Standard Pipeline                                                                                                 81
+Looking Ahead: From Exploration to Regression                                                      81
+Conclusion                                                                                                                        82
+4. Regression Techniques for Soccer Analytics. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  85
+From Lines on a Field to Lines of Best Fit: Linear Regression                                  86
+Predicting Market Value: A Player’s Worth                                                              86
+Building the Model: The Line of Best Fit                                                                  88
+Visualizing the Model                                                                                                  89
+Evaluating Performance: How Good Is Our Model?                                              90
+Counting Goals: Poisson Regression                                                                            92
+Predicting Goals in a Match                                                                                       93
+Visualizing the Poisson Model                                                                                   94
+Finding Similar Players: K-Nearest Neighbors Regression                                       95
+Predicting Player Value with KNN                                                                            96
+Choosing the Right k                                                                                                   97
+Evaluating and Interpreting Regression Models in Soccer Contexts                       97
+Using Key Performance Metrics                                                                                 97
+Understanding the Importance of a Validation Set                                                 98
+Interpreting Coefficients                                                                                             99
+Visualizing KNN: Decision Boundaries                                                                   99
+Comparing Models                                                                                                    102
+Advanced Topics in Poisson Regression: Overdispersion and Zero-Inflation     103
+Overdispersion: When Variance Exceeds the Mean                                             103
+Negative Binomial Regression                                                                                  104
+Zero Inflation: Too Many Zeros                                                                               104
+Hurdle Models: An Alternative Approach                                                             105
+Model Diagnostics: Ensuring That Your Model Is Sound                                       106
+Residual Analysis: Looking for Patterns                                                                 106
+Goodness-of-Fit Tests                                                                                                107
+Table of Contents 
+| 
+vii
+
+
+================================================================================
+PAGE 10
+================================================================================
+Influential Observations: Outliers that Matter                                                      108
+Model Selection: Choosing the Best Model                                                            108
+Practical Case Study: Predicting Match Outcomes                                                  109
+Generating the Dataset                                                                                              109
+Performing Exploratory Analysis                                                                            110
+Building and Comparing Models                                                                            112
+Evaluating on Test Data                                                                                             113
+Interpreting the Results                                                                                             115
+Feature Engineering for Better Predictions                                                               116
+Interaction Features                                                                                                   116
+Polynomial Features                                                                                                   117
+Categorical Features                                                                                                   117
+Lagged Features                                                                                                          118
+Domain-Specific Features                                                                                         119
+Common Pitfalls and Practical Tips                                                                           120
+Pitfall 1: Overfitting to the Training Data                                                               120
+Pitfall 2: Ignoring Multicollinearity                                                                         120
+Pitfall 3: Using the Wrong Model for the Data                                                      121
+Pitfall 4: Forgetting About Data Quality                                                                 121
+Tip 1: Start Simple, Then Add Complexity                                                            122
+Tip 2: Visualize, Visualize, Visualize                                                                       122
+Tip 3: Document Your Process                                                                                 122
+Tip 4: Validate with Domain Experts                                                                      122
+Looking Ahead: Where Regression Meets the Real World                                      122
+From Regression to Classification                                                                           122
+Ensemble Methods: Combining Models                                                                123
+Deep Learning: The Frontier                                                                                    123
+Time Series and Sequential Data                                                                              124
+Causal Inference: Beyond Prediction                                                                      124
+The Human Element                                                                                                 124
+Conclusion                                                                                                                      125
+5. Predicting Soccer Outcomes with Classification. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  127
+From Coin Flips to Goal Predictions: Understanding Classification                    128
+Logistic Regression: Your First Classifier                                                                   129
+The Intuition: From Numbers to Probabilities                                                      129
+Hands-On: Building an Expected Goals Model                                                     130
+Measuring Success: How Good Are Your Predictions?                                            133
+The Confusion Matrix: A Report Card for Your Model                                       133
+Precision and Recall: The Two Sides of Performance                                           135
+The ROC Curve: A Complete Performance Picture                                             136
+Evaluation of Probabilistic Models with Cost Functions                                     137
+viii 
+| 
+Table of Contents
+
+
+================================================================================
+PAGE 11
+================================================================================
+Beyond Binary: Multiclass Classification                                                                   139
+K-Nearest Neighbors: Finding Similar Situations                                                     141
+The Intuition: Birds of a Feather                                                                              141
+Hands-On: KNN for Shot Prediction                                                                     142
+Choosing the Right K                                                                                                142
+Case Study: Building a Complete Match Outcome Predictor                                 144
+Step 1: Define the Problem                                                                                       144
+Step 2: Gather and Prepare the Data                                                                       145
+Step 3: Train and Evaluate the Model                                                                      146
+Step 4: Interpret the Results                                                                                      148
+Key Takeaways from the Case Study                                                                       148
+Practical Tips and Common Pitfalls                                                                           149
+Handling Imbalanced Data                                                                                       149
+Selecting and Engineering Features                                                                         149
+Avoiding Overfitting                                                                                                  150
+Choosing When to Use Which Algorithm                                                             151
+Tuning the Decision Threshold: Finding the Sweet Spot                                        151
+Understanding the Threshold Trade-Off                                                                151
+Finding the Optimal Threshold                                                                               152
+Deciding When to Adjust the Threshold                                                               153
+Comparing Models: Which Classifier Is Best?                                                          153
+The Model Comparison Framework                                                                       154
+Hands-On: Model Comparison for xG                                                                   154
+Visualization of Model Performance                                                                       155
+Advanced Topics: Going Deeper                                                                                 156
+Scaling and Normalizing Features                                                                           156
+Handling Missing Data                                                                                             158
+Combining Classifiers with Ensemble Methods                                                    159
+Real-World Considerations                                                                                          160
+Data Quality and Availability                                                                                   160
+Model Maintenance and Updates                                                                            160
+Ethical Considerations                                                                                              160
+Looking Ahead: From Linear Boundaries to Decision Trees                                  160
+Conclusion                                                                                                                      161
+6. Advanced Classification Methods. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  163
+The Classification Tree: Soccer’s Decision Flowchart                                               164
+The Intuition: Learning the If-Then Rules of Soccer                                            164
+Hands-On: Building a Tree to Predict Pass Outcome                                          164
+Interpreting the Soccer Intelligence                                                                        166
+Understanding Pros and Cons: When to Use a Single Tree                                 166
+Tuning the Tree: Preventing Overfitting                                                                 167
+Table of Contents 
+| 
+ix
+
+
+================================================================================
+PAGE 12
+================================================================================
+Random Forest: The Wisdom of the Crowd                                                              169
+The Intuition: Ensemble Learning                                                                           170
+Hands-On: Building a Random Forest for to Predict Match Outcome             170
+Interpreting Feature Importance                                                                             171
+Tuning Random Forests                                                                                            172
+Using Out-of-Bag Error                                                                                            172
+Understanding When Random Forests Struggle                                                   173
+XGBoost: Learning from Mistakes                                                                              173
+The Intuition: Sequential Learning                                                                          173
+Hands-On: XGBoost for xG Prediction                                                                  173
+Performing SHAP Analysis: Explaining the Opaque Model                               174
+Tuning XGBoost: The Art of Hyperparameter Optimization                             176
+Knowing When to Use XGBoost Versus Random Forest                                    176
+Practical Applications: From Theory to Practice                                                      177
+Example 1: Building a Comprehensive xG Model                                                177
+Example 2: Predicting Player Actions                                                                     178
+Example 3: Recognizing Tactical Patterns                                                              178
+Handling Imbalanced Data in Soccer                                                                     179
+Using Feature Engineering for Tree-Based Models                                               180
+Looking Ahead: From Handcrafted Rules to Learned Representations                180
+Conclusion                                                                                                                      181
+7. Deep Learning for Soccer Analytics: From Intuition to Implementation. . . . . . . . . . . .  183
+Why Deep Learning for Soccer? Beyond Traditional Models                                 185
+Looking Inside the Model: How Neural Networks Capture Patterns                 186
+Learning from Data: Training, Loss, and Optimization                                       190
+Building Your First Soccer Prediction Model with PyTorch                                   193
+Binary Outcomes: Will the Home Team Win?                                                      194
+Match Results: Win, Draw, or Loss                                                                          197
+Goal Prediction: Modeling Scoring Output                                                           200
+Full Match Simulation: From Goals to Outcomes                                                 204
+A Second Lens: Implementing the Model in TensorFlow                                        209
+Binary Outcomes: Will the Home Team Win?                                                      210
+Match Results: Win, Draw, or Loss                                                                          212
+Goal Prediction: Modeling Scoring Output                                                           214
+Full Match Simulation: From Goals to Outcomes                                                 216
+Looking Ahead: From Flexible Models to Smarter Inputs                                      219
+Conclusion                                                                                                                      220
+8. Feature Engineering for Soccer Analytics. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  221
+Feature Engineering: From Raw Data to Predictive Signals                                    222
+Performance Features: The Fundamentals                                                                 222
+x 
+| 
+Table of Contents
+
+
+================================================================================
+PAGE 13
+================================================================================
+Goals For and Goals Against: Measuring Scoring Performance                         222
+Venue Splits: Considering Home Versus Away                                                      224
+Shot Quality: Evaluating Chance Creation                                                             226
+Tactical Features: Describing How Teams Play                                                         228
+Passing and Possession: Measuring Ball Control                                                  228
+Tackles, Interceptions, and Recoveries: Tracking Defensive Actions                 231
+Pressing Intensity: Applying Defensive Pressure                                                  232
+Set Pieces: Capturing Dead-Ball Situations                                                            234
+Contextual Features: Incorporating Match Conditions                                           236
+Rest and Scheduling: Modeling Fatigue and Congestion                                     236
+Form and Momentum: Capturing Recent Performance Trends                         237
+Ranking Features and Advanced Ranking Algorithms: Estimating Team
+Strength                                                                                                                       239
+The Colley Matrix: A Linear Algebra Approach                                                   240
+PageRank: A Network-Based Perspective                                                               242
+Elo Ratings: A Dynamic Rating System                                                                  245
+A Comparison of Methods: Strengths and Trade-Offs                                         248
+Player-Level Features                                                                                                     249
+Feature Engineering Pipeline: From Data to Model Input                                      251
+Case Study: Predicting the 2019 Women’s World Cup Final                                   255
+Looking Ahead: From Better Inputs to Harder Decisions                                      256
+Conclusion                                                                                                                      257
+9. The Art and Science of Soccer Betting. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  259
+Soccer Betting Basics                                                                                                     260
+Types of Soccer Bets                                                                                                   260
+Odds                                                                                                                             262
+Arbitrage Opportunities                                                                                            266
+The Real Dataset Used in This Chapter                                                                      270
+Choosing a Side                                                                                                              272
+Always Pick the Home Team                                                                                    272
+Always Pick the Lowest Odds                                                                                   272
+Use a Simple Machine Learning Baseline                                                               273
+Betting Strategies                                                                                                           274
+Fixed-Stake Betting                                                                                                    275
+Kelly Criterion                                                                                                            278
+From Predictions to Potential Profit                                                                           282
+The Reality of Profitability                                                                                        282
+Practical Considerations                                                                                           282
+The Importance of Discipline                                                                                  283
+The Role of Technology                                                                                            284
+Ethical Considerations                                                                                              284
+Table of Contents 
+| 
+xi
+
+
+================================================================================
+PAGE 14
+================================================================================
+Looking Ahead: Building on Top of the Fundamentals                                           284
+Conclusion                                                                                                                      285
+10. What’s Next for Soccer Analytics?. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  287
+What This Book Was Really About                                                                             287
+From Questions to Data                                                                                            288
+Data Preparation Is Part of the Analysis                                                                 288
+Exploration Before Prediction                                                                                 288
+Feature Engineering Is Where Domain Knowledge Enters                                 288
+Models Support Judgment, They Do Not Replace It                                             289
+The Next Stage in Soccer Analytics                                                                             289
+From Static Datasets to Living Data Pipelines                                                       289
+From Team-Level Models to Player-Level and Lineup-Level Models                290
+Richer Data: Tracking, Video, and Multimodal Analysis                                     291
+Stronger Modeling Directions                                                                                  293
+From Notebooks to Analytical Products                                                                294
+AI and Large Language Models in the Analytics Workflow                                294
+Challenges and Limits                                                                                                   295
+Data Quality and Access                                                                                            296
+Interpretability and Trust                                                                                          296
+Uncertainty Will Not Disappear                                                                              296
+Ethics, Privacy, and Responsible Use                                                                       296
+Beyond Soccer                                                                                                                297
+A Practical Roadmap After This Book                                                                       298
+Final Thoughts                                                                                                               299
+Appendix: References and Further Reading. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  301
+Glossary. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  309
+Index. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  317
+xii 
+| 
+Table of Contents
+
+
+================================================================================
+PAGE 15
+================================================================================
+Preface
+Soccer has always been a game driven by passion, intuition, and endless debate. For
+decades, it has been the world’s most watched and discussed sport, supported by the
+largest global fan base on the planet. Fans love it not only for its results, but for the
+stories, emotions, memories, and moments of uncertainty—or what we sometimes
+call miracles—that it creates.
+In recent years, this traditional way of enjoying soccer has been joined by something
+new: data. Advances in artificial intelligence (AI) and machine learning, combined
+with the growing availability of high-quality sports data and modern computing
+infrastructure, have made rigorous analysis accessible far beyond professional clubs
+and research labs. Today, fans and practitioners alike can explore tactics, evaluate
+performance, and make predictions—sometimes out of curiosity, sometimes for stra‐
+tegic insight, and sometimes as part of casual, responsible betting. With these tools,
+independent analysis is no longer limited to professionals.
+What excites us most about this shift is not only the technology itself but also
+what it enables. Data-driven methods encourage clearer thinking, more disciplined
+reasoning, and a deeper appreciation of soccer’s complexity. They do not replace
+passion or intuition; they sharpen them.
+This book sits at the intersection of two fast-moving worlds: soccer and machine
+learning. Soccer provides rich, imperfect, and fascinating data; machine learning
+offers principled ways to engage with it. Together, they form an ideal setting for
+learning data analytics and predictive modeling in a concrete, motivating, and imme‐
+diately applicable way.
+The timing of this book is particularly meaningful. Its publication in 2026 comes
+during the FIFA World Cup, a moment when global attention, curiosity, and debate
+around soccer peak. As fans analyze matches, tactics, and outcomes with renewed
+intensity, this book offers an opportunity to engage more deeply with the game—
+to learn, experiment, and think critically about soccer through data and machine
+learning when interest is at its highest.
+xiii
+
+
+================================================================================
+PAGE 16
+================================================================================
+Who Should Read This Book
+This book is written for soccer fans who want to explore the analytical side of the
+game. Readers should be willing to work with code and data, but no specialized tech‐
+nical background is required beyond basic programming familiarity and a general
+understanding of soccer. No prior experience with sports analytics is assumed.
+More broadly, the book is ideal for anyone who wants to learn machine learning
+through real, meaningful problems rather than abstract exercises. This includes the
+following:
+• Students of data science, statistics, optimization, computer science, or sports
+•
+analytics
+• Professionals seeking to strengthen applied machine learning skills
+•
+• Educators looking for engaging, hands-on material to teach predictive modeling
+•
+Why We Wrote This Book
+Throughout our careers—in academia, industry, and teaching—we noticed a gap:
+no resource combined methodological rigor with hands-on practice, grounded in a
+single, coherent domain. Many machine learning books are abstract; many sports
+analytics resources are narrow or assume prior expertise.
+This book attempts to fill that gap. It reflects a collaboration between industry and
+academic authors, blending hands-on experience with large-scale, real-world systems
+and deep expertise in statistics and sports analytics. It is the book we would have
+wanted when first applying machine learning to real data: practical, honest about
+limitations, and focused on building intuition as much as building models.
+Our goal is that readers finish this book not only knowing how to implement predic‐
+tive models, but also understanding why certain approaches work, when they fail, and
+how the same ideas can be applied beyond soccer to other real-world problems.
+Navigating This Book
+The book is organized to guide readers from context and fundamentals to advanced
+modeling techniques and practical applications:
+• Chapter 1 introduces the field, motivates the book’s focus, and frames the main
+•
+analytical questions.
+• Chapter 2 establishes the Python-based workflow used throughout the book.
+•
+• Chapter 3 covers core statistics, visualizations, and habits for understanding data
+•
+in soccer datasets.
+xiv 
+| 
+Preface
+
+
+================================================================================
+PAGE 17
+================================================================================
+• Chapter 4 develops regression-based prediction for continuous and count
+•
+outcomes.
+• Chapter 5 introduces binary and multiclass classification tasks such as expected
+•
+goals and match-result prediction.
+• Chapter 6 extends the classification toolkit with tree-based and ensemble
+•
+methods.
+• Chapter 7 introduces neural networks and hands-on deep learning workflows.
+•
+• Chapter 8 shows how domain knowledge and data representation can signifi‐
+•
+cantly improve model performance.
+• Chapter 9 examines betting, optimization, risk, and decision making under
+•
+uncertainty.
+• Chapter 10 draws the main ideas together and points toward future applications
+•
+and further study.
+• The Appendix and Glossary provide references and terminology to support
+•
+ongoing learning.
+Conventions Used in This Book
+The following typographical conventions are used in this book:
+Italic
+Indicates new terms, URLs, email addresses, filenames, and file extensions.
+Constant width
+Used for program listings, as well as within paragraphs to refer to program
+elements such as variable or function names, databases, data types, environment
+variables, statements, and keywords.
+Constant width bold
+Shows commands or other text that should be typed literally by the user.
+Constant width italic
+Shows text that should be replaced with user-supplied values or by values deter‐
+mined by context.
+This element signifies a tip or suggestion.
+Preface 
+| 
+xv
+
+
+================================================================================
+PAGE 18
+================================================================================
+This element signifies a general note.
+This element indicates a warning or caution.
+Using Code Examples
+For the latest book updates, additional resources, and related information, visit
+https://SoccerAnalyticsML.com. Companion code, exercises, and supplemental mate‐
+rial are available at https://oreil.ly/supp_SoccerAnalytics.
+If you have a technical question or a problem using the code examples, please send an
+email to support@oreilly.com.
+This book is here to help you get your job done. In general, if example code is
+offered with this book, you may use it in your programs and documentation. You
+do not need to contact us for permission unless you’re reproducing a significant
+portion of the code. For example, writing a program that uses several chunks of code
+from this book does not require permission. Selling or distributing examples from
+O’Reilly books does require permission. Answering a question by citing this book
+and quoting example code does not require permission. Incorporating a significant
+amount of example code from this book into your product’s documentation does
+require permission.
+We appreciate, but generally do not require, attribution. An attribution usually
+includes the title, author, publisher, and ISBN. For example: Soccer Analytics with
+Machine Learning by Haipeng Gao, Ari Joury, Weining Shen, and Guanyu Hu
+(O’Reilly). Copyright 2026 Haipeng Gao, Ari Joury, Weining Shen, and Guanyu Hu,
+978-1-098-18111-6.
+If you feel your use of code examples falls outside fair use or the permission given
+above, feel free to contact us at permissions@oreilly.com.
+xvi 
+| 
+Preface
+
+
+================================================================================
+PAGE 19
+================================================================================
+O’Reilly Online Learning
+For more than 40 years, O’Reilly Media has provided technol‐
+ogy and business training, knowledge, and insight to help
+companies succeed.
+Our unique network of experts and innovators share their knowledge and expertise
+through books, articles, and our online learning platform. O’Reilly’s online learning
+platform gives you on-demand access to live training courses, in-depth learning
+paths, interactive coding environments, and a vast collection of text and video from
+O’Reilly and 200+ other publishers. For more information, visit https://oreilly.com.
+How to Contact Us
+Please address comments and questions concerning this book to the publisher:
+O’Reilly Media, Inc.
+141 Stony Circle, Suite 195
+Santa Rosa, CA 95401
+800-889-8969 (in the United States or Canada)
+707-827-7019 (international or local)
+707-829-0104 (fax)
+support@oreilly.com
+https://oreilly.com/about/contact.html
+We have a web page for this book, where we list errata and any additional informa‐
+tion. You can access this page at https://oreil.ly/soccer-analytics_ML.
+For news and information about our books and courses, visit https://oreilly.com.
+Find us on LinkedIn: https://linkedin.com/company/oreilly.
+Watch us on YouTube: https://youtube.com/oreillymedia.
+Preface 
+| 
+xvii
+
+
+================================================================================
+PAGE 20
+================================================================================
+Acknowledgments
+This book would not have been possible without the support of our families, who
+patiently accepted the time and energy this project required. We are grateful to collea‐
+gues and collaborators who challenged our thinking, tested our ideas, and offered
+valuable feedback.
+We also want to express our sincere thanks to the reviewers who read the manuscript
+so carefully and helped strengthen it in important ways. Their comments, correc‐
+tions, questions, and suggestions pushed us to make this book clearer, more accurate,
+and more useful. We are especially grateful to Laurie Shaw, Poli Garcia, and Ijlal
+Amir, as well as to the reviewers who chose to remain anonymous, for the time, care,
+and thoughtful feedback they brought to the review process.
+Our thanks also go to the editorial team at O’Reilly. We are grateful to senior
+acquisitions editor Michelle Smith, development editor Jeff Bleiel, and production
+editor Clare Laylock for their support and guidance throughout the development and
+publication of this book. We greatly appreciated the opportunity to work with all of
+you.
+Last but not least, we want to thank the broader soccer analytics and open source
+communities. The shared datasets, tools, discussions, and collective curiosity within
+these communities made this work possible and remind us that progress in both
+soccer and data science is a collective effort.
+xviii 
+| 
+Preface
+

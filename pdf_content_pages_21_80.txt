@@ -1,0 +1,2658 @@
+
+================================================================================
+PAGE 21
+================================================================================
+CHAPTER 1
+The Soccer Analytics Landscape
+It is Saturday evening. You are at home watching Liverpool play. Before kickoff, you
+placed a small, casual bet on them to win—not as a professional strategy, but simply
+to make the match more engaging. As the game unfolds, your phone rests nearby
+with a live betting app open. The win probability updates continuously.
+Liverpool strings together several passes in the opponent’s half. The probability shifts
+from 54% to 57%. A sudden counterattack follows. A dangerous shot. The probability
+drops to 49%. The score has not changed. Yet your confidence moves with the
+numbers.
+This experience captures a defining feature of modern soccer: the game is no longer
+interpreted solely through narrative and intuition. Increasingly, it is accompanied—
+and often understood—through probabilities.
+But when a model assigns a 49% chance of victory, several natural questions imme‐
+diately arise. What determines those probabilities? What assumptions underlie that
+number? How stable are these estimates? How should we interpret them? Which
+signals in the data are meaningful, and which are merely noise?
+Answering these questions requires understanding the unique analytical challenges of
+soccer. The sport is low scoring and highly variable. Outcomes often hinge on a small
+number of events. Apparent dominance may not translate into goals, while short-
+term performance swings may reflect randomness rather than structural change.
+Human perception gravitates toward memorable moments; statistical reasoning, in
+contrast, requires consistency across many moments.
+Soccer analytics exists within this tension. This chapter provides an overview of the
+modern soccer analytics landscape. We discuss the types of questions soccer analytics
+seeks to answer, the kinds of data available, the perspectives through which analysis
+can be conducted, the modeling approaches commonly used, and the conceptual
+1
+
+
+================================================================================
+PAGE 22
+================================================================================
+principles that guide disciplined evaluation. Using the preceding example, we intro‐
+duce the broader scope of what soccer analytics is and how it is applied.
+Equally important, this chapter also clarifies the scope of this book. Soccer analyt‐
+ics is a broad field, and covering every aspect would be impossible. Instead, we
+deliberately focus on a narrower domain: constructing predictive models that are
+rigorous enough to illustrate fundamental analytical tools while remaining accessible
+to readers.
+By attempting to answer several classic yet interesting questions in soccer analysis, we
+hope the topics explored in this book will draw you into the field of soccer analytics
+and equip you with the modern analytical toolkit needed to further explore and
+advance the discipline.
+The Problems That Soccer Analytics Helps Solve
+Soccer analytics is not pursued simply for intellectual curiosity. In practice, it exists to
+support decisions.
+Across professional clubs, leagues, media organizations, and betting markets, data-
+driven analysis helps answer a wide range of operational and strategic questions.
+The resulting decisions vary in scale—from real-time tactical adjustments during a
+match to long-term roster construction and financial planning. Understanding these
+decision contexts clarifies why analytics has become an integral part of modern
+soccer organizations.
+Soccer Clubs: Making Decisions Across the Organization
+Within professional soccer clubs, analytics supports a wide range of decisions across
+coaching, player management, and organizational operations.
+Match preparation and tactical decisions
+One of the most visible applications of analytics lies in match preparation and tactical
+planning. Coaching staffs must evaluate opponents, determine formations, select
+starting lineups, and plan substitution strategies. These decisions often rely on a
+combination of experience, video review, and statistical analysis.
+Data analysts contribute by examining patterns across historical matches and iden‐
+tifying measurable tendencies. For example, analysts may evaluate how a team per‐
+forms under different pressing intensities, how certain formations influence shot
+creation, or how substitution timing affects late-game scoring probabilities.
+2 
+| 
+Chapter 1: The Soccer Analytics Landscape
+
+
+================================================================================
+PAGE 23
+================================================================================
+Typical questions analysts help address include the following:
+• Which tactical setups historically perform best against a specific opponent?
+•
+• How does pressing intensity influence defensive stability?
+•
+• When does fatigue begin to meaningfully affect defensive performance?
+•
+• Which lineup combinations produce the most stable attacking structure?
+•
+Analytics does not replace coaching judgment. Instead, it provides structured evi‐
+dence that complements tactical expertise and observational insight.
+Player recruitment and roster management
+Another major application of soccer analytics lies in player recruitment and long-
+term roster construction.
+Professional clubs operate within financial constraints and competitive pressures.
+Decisions about signing, selling, or extending players often involve large financial
+commitments. Analytics helps reduce uncertainty in these decisions by identifying
+measurable performance indicators and projecting future contributions.
+Recruitment departments frequently combine scouting reports with statistical pro‐
+files derived from historical event data. Analysts may evaluate how well a player’s
+production translates across leagues, whether their style fits a specific tactical system,
+and how performance evolves across age ranges.
+In practice, analysts often help answer questions such as these:
+• Which players produce the highest expected goal contribution relative to their
+•
+role?
+• How stable are a player’s performance metrics across seasons?
+•
+• How likely is a player’s performance to translate into a different league or tactical
+•
+system?
+• What is a player’s projected performance trajectory over the next several seasons?
+•
+These insights support transfer strategy, contract negotiations, and long-term roster
+planning.
+Player performance and development
+Modern clubs also rely on analytics to support athlete development and health man‐
+agement. Advances in sports science and wearable technology have enabled teams to
+collect detailed physiological and workload data. GPS tracking, heart-rate monitors,
+and training metrics allow performance staff to monitor player fatigue, recovery
+patterns, and injury risk.
+The Problems That Soccer Analytics Helps Solve 
+| 
+3
+
+
+================================================================================
+PAGE 24
+================================================================================
+Data analysts working alongside sports scientists and medical staff help translate this
+information into actionable insights.
+For example, analytics can help answer questions such as these:
+• How does cumulative training load influence injury risk?
+•
+• Which workload patterns improve performance without increasing fatigue?
+•
+• How does match congestion affect sprint output and recovery?
+•
+• What training interventions best support long-term player development?
+•
+These analyses support evidence-based training programs and help ensure that play‐
+ers remain healthy and available throughout the season.
+Club operations and fan engagement
+Professional soccer organizations are also complex businesses. Beyond the pitch,
+teams must manage ticket sales, marketing campaigns, sponsorship partnerships, and
+fan engagement. Analytics plays an increasingly important role in these operations.
+Teams may develop predictive models to forecast ticket demand, optimize dynamic
+pricing strategies, or identify segments of fans most likely to respond to specific
+promotions. Digital engagement data—from mobile apps, streaming platforms, and
+social media—also provides insight into fan behavior.
+Typical analytical questions in this domain include the following:
+• How should ticket prices adjust based on opponent strength and demand?
+•
+• Which marketing campaigns generate the highest fan engagement?
+•
+• How can clubs improve fan retention across seasons?
+•
+• Which digital platforms drive the most interaction with supporters?
+•
+Although these business applications fall outside the technical scope of this book,
+they illustrate the broader organizational role of analytics within professional sports.
+Betting Markets: Modeling Uncertainty and Pricing Outcomes
+Soccer analytics also plays a central role in sports betting markets.
+Bookmakers such as bet365, DraftKings, and other betting platforms must set odds
+that reflect the probability of multiple match outcomes. These odds act as market pri‐
+ces that allow betting activity to occur while also managing the financial exposure of
+the bookmaker. In practice, odds must strike a careful balance: they must be accurate
+enough to reflect the underlying probabilities of outcomes while also accounting for
+market behavior and betting volume.
+4 
+| 
+Chapter 1: The Soccer Analytics Landscape
+
+
+================================================================================
+PAGE 25
+================================================================================
+To accomplish this, bookmakers rely on statistical models that estimate probabilities
+for events such as match outcomes, total goals, scorelines, and other in-game occur‐
+rences. These models typically incorporate large historical datasets that capture team
+performance, scoring patterns, and contextual factors. Variables may include meas‐
+ures of team strength, recent form, home-field advantage, injuries, travel schedules,
+and historical head-to-head matchups.
+Many betting models build upon classical statistical frameworks such as Poisson
+goal models, which estimate the expected number of goals scored by each team.
+More advanced systems may incorporate machine learning methods that combine
+hundreds of predictive features derived from event data, rankings, and market
+information.
+The objective of these models is not perfect prediction. Soccer remains a low-scoring
+and high-variance sport, where rare events and randomness can strongly influence
+outcomes. Instead, bookmakers aim to produce well-calibrated probabilities that
+allow markets to function efficiently while maintaining balanced risk exposure.
+In addition to internal modeling, bookmakers must also react to the behavior of
+the betting market itself. When large volumes of wagers arrive on one side of a
+market, odds may adjust to rebalance risk. As a result, betting markets represent an
+interaction between statistical forecasting and market dynamics.
+Because betting markets update continuously as new information arrives—lineups,
+injuries, weather conditions, or match events—probabilistic modeling and uncer‐
+tainty estimation are central to their operation. Live betting systems in particular
+must update probabilities in real time as the match state evolves.
+For analysts and researchers, betting markets also provide a useful benchmark.
+Because odds reflect the aggregated expectations of sophisticated models and
+informed bettors, they are often treated as a reference point when evaluating predic‐
+tive models in soccer analytics.
+Fans and Analysts: Reading the Game Beyond the Scoreline
+Finally, soccer analytics is not limited to professional organizations. Fans and inde‐
+pendent analysts increasingly use data and statistical models to better understand the
+game.
+In many cases, this engagement begins with simple curiosity: estimating the probabil‐
+ity that a team will win, comparing performance trends over time, or exploring which
+factors most strongly influence match outcomes. For some fans, building predictive
+models becomes an engaging way to interact with the sport, transforming passive
+viewing into an active analytical exercise.
+The Problems That Soccer Analytics Helps Solve 
+| 
+5
+
+
+================================================================================
+PAGE 26
+================================================================================
+This perspective connects directly to the scenario that opened this chapter. A fan
+watching a match may notice live win probabilities shifting from 54% to 57%,
+then falling again after a counterattack. Behind those numbers are statistical models
+trained on large collections of historical match data, continuously updating as the
+state of the game changes.
+For independent analysts and enthusiasts, building such models can be both educa‐
+tional and entertaining. It provides a hands-on way to explore statistical reasoning,
+machine learning methods, and the dynamics of a complex sport. Through experi‐
+mentation with data, fans can test hypotheses, evaluate predictive signals, and develop
+a deeper understanding of how performance translates into outcomes. This book is
+written largely for this audience: readers who want to understand how predictive
+models in soccer are constructed, evaluated, and interpreted using real data.
+Soccer analytics therefore sits at the intersection of sport, data science, and decision
+making. From tactical preparation to roster construction, from player development
+to betting markets—and even fan curiosity—analytical tools help structure reasoning
+under uncertainty.
+The Data-Driven Evolution in Soccer
+Soccer’s transformation from an intuition-driven craft to a data-informed discipline
+has reshaped the way the game is understood, analyzed, and managed at every level.
+This section traces that evolution—from the limits of traditional analysis, through
+the data infrastructure that made new approaches possible, to the metrics and appli‐
+cations that define the field today.
+From Outcomes to Process: The Limits of Traditional Analysis
+Soccer has long been described as the beautiful game—fluid, creative, and often
+unpredictable. For decades, match analysis relied primarily on observational exper‐
+tise. Coaches and analysts interpreted performance through video review, accumula‐
+ted experience, and a limited set of summary statistics such as goals scored, goals
+conceded, and league standings. These tools remain valuable, but they provide only a
+relatively coarse and often subjective view of performance.
+Traditional evaluation also depended heavily on final outcomes. A league table, for
+example, awards the same three points for a 1–0 win against a title contender as for
+a 1–0 win against a relegation candidate. This approach is effective for determining
+standings, but it captures little about the contextual difficulty or underlying quality of
+each result. This limitation is especially consequential in soccer because the sport is
+relatively low scoring, and outcomes are often shaped by a small number of events—a
+deflection, a refereeing decision, or a single moment of individual brilliance. As a
+result, match outcomes alone can be noisy indicators of team quality.
+6 
+| 
+Chapter 1: The Soccer Analytics Landscape
+
+
+================================================================================
+PAGE 27
+================================================================================
+Modern soccer analytics developed in part as a response to this problem. Instead
+of focusing only on whether a team won or lost, analysts increasingly examine the
+processes that generate outcomes: how chances were created, how defensive pressure
+was applied, how possession moved through space, and how players contributed both
+on and off the ball. These intermediate signals are often more informative than raw
+results for evaluating performance and, in many settings, more useful for predicting
+future outcomes.
+The Data Revolution: From Event Logs to Tracking Systems
+This shift has been enabled by a dramatic increase in the granularity of available
+data. Over the past two decades, several developments have transformed the informa‐
+tional environment of the sport. Event data records on-ball actions such as passes,
+shots, tackles, dribbles, interceptions, and fouls, typically with timestamps and spatial
+coordinates. This makes it possible to reconstruct sequences of play and quantify
+contributions such as progressive passing, entries into dangerous areas, and posses‐
+sion patterns.
+Tracking data adds another layer of detail. Optical tracking systems and other elec‐
+tronic performance and tracking systems record the positions of players and the
+ball multiple times per second, making it possible to study off-ball movement, team
+shape, spacing, pressing behavior, and spatial control in ways that were previously
+difficult to measure. FIFA’s electronic performance and tracking systems framework
+explicitly covers both camera-based and wearable technologies for measuring posi‐
+tional and physical information.
+Training and physiological data further extend the analytical scope beyond match
+play. Wearable systems can help monitor workload, movement intensity, and
+recovery-related signals, supporting player development, load management, and
+injury-risk reduction. FIFA likewise notes that these systems may be combined with
+accelerometers, gyroscopes, and heart-rate monitoring to measure load and physio‐
+logical parameters.
+Underpinning all this is modern computational infrastructure. Cloud computing,
+large-scale data pipelines, and machine learning frameworks allow analysts to process
+large match databases, train predictive models, and simulate many possible scenarios
+efficiently. This has helped move soccer analysis beyond descriptive summaries and
+toward probabilistic modeling and decision support.
+Analytics in Practice: Metrics, Applications, and Scope
+Together, these developments have enabled forms of analysis that were previously dif‐
+ficult or impossible at scale. Expected goals, or xG, estimates the likelihood that a shot
+will result in a goal based on contextual information such as shot location and chance
+characteristics. Because it models shot quality rather than simply counting goals, it
+The Data-Driven Evolution in Soccer 
+| 
+7
+
+
+================================================================================
+PAGE 28
+================================================================================
+is often treated as a more stable indicator of chance creation than raw scoring totals.
+Related ideas, such as expected assists (xA) and expected threat (xT), extend this
+logic to earlier phases of possession by estimating the value of actions that contribute
+to creating danger. StatsBomb, for example, describes xG as a model-based estimate
+derived from past similar shots and notes that models use contextual features like
+location, body part, and pass type.
+At the team level, analysts also use metrics to describe style and defensive behavior.
+One widely used example is passes per defensive action, or PPDA, which indicates
+the number of opposition passes a team allows relative to its defensive actions in a
+defined area of the pitch; lower values are generally associated with more aggressive
+pressing. This kind of metric helps analysts compare team behavior systematically
+rather than relying only on qualitative impressions. These capabilities have reshaped
+decision making across the sport.
+Clubs now integrate analytics into recruitment, performance analysis, and match
+preparation. Statistical profiles can help identify players who may be undervalued in
+the transfer market, while opponent-specific data can inform tactical planning. Media
+organizations increasingly use advanced metrics and visualizations to provide richer
+explanations of matches, and betting markets continuously update probabilities as
+new information becomes available. At the same time, analytics does not replace
+traditional expertise. Video analysis remains essential for interpreting tactical intent,
+and coaching judgment provides context that numbers alone cannot fully capture.
+In practice, analytics is most useful when it complements rather than substitutes for
+scouting, tactical observation, and domain knowledge.
+At its core, soccer analytics still addresses familiar questions: Why did a particular
+outcome occur? What is likely to happen next? What decisions can improve the
+chances of success? What has changed is not the curiosity itself, but the quality, scale,
+and structure of the data used to investigate those questions.
+This book operates within that framework—but within clearly defined boundaries.
+Soccer is not only a complex sport but also a difficult statistical environment: events
+are sparse, outcomes are highly variable, and contextual factors often influence per‐
+formance in subtle ways. The next section directly examines these challenges before
+introducing the analytical framework that guides the rest of the book.
+Why Soccer Resists Easy Analysis
+Soccer presents several characteristics that make predictive modeling particularly
+challenging. First, it is a low-scoring sport. Matches often contain only a small
+number of goals, which increases variance and reduces the signal-to-noise ratio. A
+single event can disproportionately influence the outcome of a match. Second, soccer
+is continuous and state-dependent. Events occur sequentially and interact with one
+another. A defensive mistake early in the match may change tactical behavior for
+8 
+| 
+Chapter 1: The Soccer Analytics Landscape
+
+
+================================================================================
+PAGE 29
+================================================================================
+the remaining 90 minutes. Third, direct experimentation is limited. Unlike many
+other sports, substitution opportunities are restricted, and tactical adjustments occur
+within tight constraints. This limits the ability to observe controlled comparisons.
+Fourth, context matters greatly. Opponent strength, match state, fatigue, travel sched‐
+ules, and player availability all influence performance.
+These contextual variables often interact in complex ways. Some influential factors
+are also rare or partially unobservable. Individual defensive positioning, communi‐
+cation among players, or tactical discipline may shape match outcomes without
+being fully captured in event data. These characteristics mean that soccer models
+must be carefully evaluated. Predictive systems require calibrated probabilities, robust
+validation procedures, and cautious interpretation. In this book, we rely on several
+guiding principles while acknowledging these challenges. Together, they shape the
+way models are designed, evaluated, and interpreted.
+A Framework for Soccer Analysis
+Soccer analytics is ultimately about improving the way we reason about a sport
+that contains substantial uncertainty. Analytical methods attempt to distinguish
+short-term fluctuations from the underlying signals that reflect team quality and
+performance.
+To make sense of the field, this section organizes soccer analytics along three com‐
+plementary axes: the types of analysis that describe the kinds of questions analysts
+attempt to answer, the data sources that enable modern analysis, and the levels of
+aggregation at which soccer performance can be studied. Together, these dimensions
+form the framework for most modern soccer analysis.
+The Three Types of Analysis
+Soccer analytics can be understood as a progression of three layers that move from
+understanding the past to guiding future decisions. Table 1-1 shows an overview of
+these layers.
+Descriptive analytics focuses on summarizing what has already occurred. It trans‐
+forms raw match data into interpretable measurements that describe team behavior
+and performance. Examples include pass completion rates, shot maps, pressing effi‐
+ciency, and a team’s performance shifts depending on match state—whether it is
+winning, losing, or drawing. These metrics establish a factual baseline that allows
+analysts to understand how a team has played.
+Predictive analytics moves from description to estimation. Instead of asking what
+happened, it asks what is likely to happen next. Historical data is used to estimate
+probabilities for future events—models such as xG, probabilistic match outcome
+A Framework for Soccer Analysis 
+| 
+9
+
+
+================================================================================
+PAGE 30
+================================================================================
+forecasts, or ranking systems designed to estimate a team’s underlying strength
+beyond its current position in the league table.
+Prescriptive analytics connects predictions to decision making. Once a model pro‐
+duces a probabilistic forecast, the next question becomes how that information
+should influence strategy. Professional clubs may use simulation models to evaluate
+substitution timing, identify optimal transfer targets under budget constraints, or
+explore tactical adjustments against specific opponents.
+Table 1-1. Common types of analytics and how they map to soccer decisions
+Analytics type
+Core question
+Soccer example
+Typical outputs
+Descriptive
+What happened?
+Shot maps and xG summaries for a match
+Summaries, dashboards,
+distributions
+Predictive
+What is likely to happen?
+Win/draw/loss forecasts; shot-level goal
+probability
+Probabilities, risk estimates,
+forecasts
+Prescriptive
+What should we do?
+Substitution timing based on fatigue and
+match state
+Recommendations, optimized
+actions, scenario analysis
+This book focuses primarily on the descriptive and predictive layers. We begin with
+disciplined descriptive analysis and then develop models designed to forecast match
+outcomes.
+Data Sources for Modern Analysis
+The growth of soccer analytics has been driven largely by the increasing richness and
+resolution of available data. Several categories now form the foundation of modern
+analysis. A summary is shown in Table 1-2.
+Event data records discrete on-ball actions during a match. Passes, shots, tackles,
+interceptions, dribbles, and fouls are logged with timestamps and spatial coordinates.
+Because it captures the sequence of play, event data allows analysts to reconstruct
+attacking buildup, measure ball progression, and evaluate how teams create scoring
+opportunities. Event data is also the most widely available data source and forms the
+primary dataset used in this book.
+Tracking data provides much finer spatial resolution. Optical camera systems or GPS
+sensors capture the positions of all players and the ball many times per second—
+often around 25 frames per second. This data reveals the spatial context behind
+events, allowing analysts to study defensive shape, spacing between players, pressing
+intensity, and off-ball movement.
+Physiological and performance data records metrics such as sprint counts, high-
+intensity running distance, heart rate, and recovery indicators. These measurements
+are typically used by sports science departments to monitor player workload, reduce
+injury risk, and support long-term player development.
+10 
+| 
+Chapter 1: The Soccer Analytics Landscape
+
+
+================================================================================
+PAGE 31
+================================================================================
+Betting market data offers a distinct and informative perspective. Bookmakers aggre‐
+gate vast amounts of information to produce odds that reflect market expectations
+about match outcomes. Converting these odds into implied probabilities allows
+analysts to benchmark predictive models against a highly competitive forecasting
+environment.
+Table 1-2. Core soccer data sources and practical considerations
+Data type
+Content
+Strengths
+Common cautions
+Event data
+Timestamped on-ball actions
+(passes, shots, tackles, etc.)
+Widely available; supports
+most analytical workflows
+Limited off-ball context; vendor
+definitions may differ.
+Tracking data
+High-frequency player and
+ball coordinates
+Captures spacing, shape,
+and off-ball movement
+Large volume; requires careful
+alignment and standardization.
+Physiological and
+performance data
+Player health data such as
+sprint counts and heart rate
+Reduces injury risk and
+supports long-term player
+development
+Such data is usually not public and will
+not be used in this book.
+Betting market
+data
+Bookmaker odds and implied
+probabilities
+Reflects aggregated
+forecasting expertise
+Margins and liquidity vary; odds reflect
+public information.
+From Player to League: Levels of Aggregation
+Soccer performance can be studied at different levels of aggregation, and the choice of
+level shapes both what questions can be asked and how reliably they can be answered.
+Table 1-3 provides a summary.
+At the player level, analysts attempt to isolate the contribution of individual actions.
+Modern metrics such as on-ball value (OBV) and valuing actions by estimating prob‐
+abilities (VAEP) estimate how much a single pass, shot, or defensive action changes a
+team’s probability of scoring or conceding. These approaches are particularly valuable
+in scouting and recruitment.
+At the team level, individual actions are aggregated into collective performance indi‐
+cators. Analysts examine patterns such as shot quality, defensive efficiency, possession
+structure, and chance creation. Because team-level metrics tend to be more stable
+over time than individual statistics, they provide a stronger foundation for predictive
+modeling.
+At the match level, analysts focus on the dynamics of a single game. Contextual
+factors such as opponent strength, scoreline, red cards, and game state strongly
+influence team behavior. Adjusting for these conditions helps separate underlying
+team quality from situational effects.
+At the league level, analysis provides the broader competitive context. Teams compete
+within environments that differ in playing style, pace, and scoring frequency. League-
+level adjustments allow analysts to account for differences in competition quality and
+strength of schedule when comparing performance across competitions.
+A Framework for Soccer Analysis 
+| 
+11
+
+
+================================================================================
+PAGE 32
+================================================================================
+Table 1-3. The soccer analytics hierarchy and what each level contributes
+Level
+Unit
+Relevance
+Example adjustment
+Player
+Individual
+Skill, role, and playing time shape observed
+performance
+Apply per-90 normalization and position-
+based modeling.
+Team
+Club or national team
+Style and teammates influence player
+opportunities
+Control for possession, tempo, and tactical
+context.
+Match
+Single game
+Opponent strength and match state affect
+behavior
+Include opponent quality, scoreline, and
+game context.
+League
+League or
+tournament
+Baseline difficulty varies across countries
+and divisions
+Adjust for league strength when comparing
+player output.
+This book focuses primarily on the team level. By treating the team as the central
+unit of analysis, we can construct predictive models that capture persistent perfor‐
+mance signals while remaining robust to short-term fluctuations in individual player
+performance.
+Principles That Run Through Everything
+Beyond layers, data, and levels, several conceptual ideas appear repeatedly through‐
+out modern soccer analytics. Rather than isolated rules, they form a connected way of
+thinking about evidence and inference in a noisy, complex sport.
+The first is the distinction between association and causation. Statistical relationships
+do not automatically imply causal explanations. A variable may improve the predic‐
+tive accuracy of a model without representing a true causal mechanism. Certain
+passing patterns may correlate with winning, for instance, yet the underlying driver
+might be broader tactical structure rather than the passes themselves. Analysts must
+therefore interpret predictive variables with care, resisting the temptation to read
+causation into correlation.
+The second is heterogeneity. Teams differ substantially in playing style, tactical philos‐
+ophy, financial resources, and competitive environment. Models that assume uniform
+behavior across all teams often perform poorly precisely because they ignore these
+structural differences. Recognizing heterogeneity helps analysts design models that
+remain robust across leagues, seasons, and tactical contexts.
+The third is the importance of contextual comparison. Performance metrics are
+meaningful only when interpreted relative to context. Raw totals—goals scored, pos‐
+session percentage—do not automatically indicate team strength. A team that scores
+frequently against weaker opposition may not perform as well against stronger com‐
+petition. Ranking systems and strength-of-schedule adjustments provide a structured
+way to make comparisons that are fair and informative.
+12 
+| 
+Chapter 1: The Soccer Analytics Landscape
+
+
+================================================================================
+PAGE 33
+================================================================================
+These three principles—causal discipline, structural awareness, and contextual inter‐
+pretation—guide both model design and the way results are read throughout the
+chapters that follow.
+Looking Ahead: A Guided Tour of the Book
+Soccer analytics spans a wide range of modeling approaches, from simple statistical
+summaries to modern machine learning systems. Rather than focusing on any single
+method, this book presents a structured progression of techniques, with each layer of
+complexity building on the foundations established before it.
+The journey begins with Chapter 2, which establishes the computational workflow
+used throughout the rest of the book. In Chapter 3, we then examine data structure,
+summarize performance, and visualize play.
+From there, the modeling chapters proceed in sequence. Chapter 4 develops
+continuous-outcome and count-based prediction. Chapter 5 introduces binary and
+multiclass classification. Chapter 6 extends that work with tree-based and ensemble
+models.
+Chapter 7 introduces neural-network-based methods. Chapter 8 shows how to turn
+soccer knowledge into stronger model inputs. Chapter 9 connects forecasting to
+valuation, staking, and decision making under uncertainty. Finally, Chapter 10 draws
+the main ideas together and points to the next steps after the book.
+Across all these approaches, three methodological principles remain central: valida‐
+tion, calibration, and interpretability. The goal is not algorithmic novelty, but disci‐
+plined predictive modeling within a clear and practical analytical framework.
+Conclusion
+Soccer analytics is no longer a niche pursuit; it has become a fundamental lens
+through which the game is understood, managed, and enjoyed. The shift from
+intuition-driven observation to data-informed analysis has reshaped decision mak‐
+ing across professional clubs, betting markets, and the broader fan community. By
+moving beyond raw outcomes to examine the underlying processes, analysts can now
+quantify performance, evaluate risk, and uncover patterns that traditional methods
+often miss. Yet the sport’s inherent low-scoring nature, continuous flow, and complex
+contextual dependencies ensure that modeling soccer remains a challenging endeavor
+that requires both statistical rigor and deep domain knowledge.
+This chapter has mapped the territory, establishing the descriptive, predictive, and
+prescriptive layers that define modern analysis, while outlining the data sources
+and levels of aggregation that make such work possible. The principles of causal
+discipline, structural awareness, and contextual interpretation introduced here will
+Conclusion 
+| 
+13
+
+
+================================================================================
+PAGE 34
+================================================================================
+serve as our compass. As we move forward into the practical application of these
+concepts, starting with the computational foundations in the next chapter, the goal
+is not simply to build models but to develop a disciplined, probabilistic approach to
+reasoning about the beautiful game.
+14 
+| 
+Chapter 1: The Soccer Analytics Landscape
+
+
+================================================================================
+PAGE 35
+================================================================================
+CHAPTER 2
+Python Fundamentals:
+Building Your Analytics Toolkit
+In Chapter 1, we mapped the analytical landscape of soccer and clarified the focus of
+this book: using data to describe matches, explain patterns, and build predictions. To
+do that well, we need a reliable computational environment in which analysis can be
+written, tested, reproduced, and extended.
+Python is that environment for the rest of the book. It gives us a readable language, a
+mature ecosystem of data tools, and a practical workspace for moving from raw data
+to analytical output. Before we analyze matches, engineer features, or train predictive
+models, we first need to set up that workspace and become comfortable with its core
+habits.
+This chapter therefore builds the foundation for everything that follows. You will
+install Python, create an isolated working environment, use Jupyter Notebook, and
+learn the syntax and data structures that later chapters rely on. The material is
+introductory, but it underpins every analysis, model, and conclusion in the book.
+Even when the examples in this chapter are intentionally simple, we will try to keep
+them close to the kinds of objects that soccer analysts actually work with: team
+names, scores, match outcomes, shot counts, and basic summaries. The point is to
+learn the programming move in a context that will still feel familiar when we return
+to full match and event datasets.
+Python: The Language Behind Modern Analytics
+Python is well suited to soccer analytics for several practical reasons. It is read‐
+able, expressive, and approachable, even for those with limited programming experi‐
+ence. Its syntax is designed to be clear and concise, allowing complex ideas to be
+15
+
+
+================================================================================
+PAGE 36
+================================================================================
+implemented with relatively little code. This emphasis on clarity—often described as
+being Pythonic—reduces friction between thinking and implementation.
+Beyond its accessibility, Python has become one of the dominant languages in data
+science and machine learning. Its widespread adoption has led to a mature ecosystem
+of libraries, tools, and contributors across many domains. Sports analytics is no
+exception. A growing community of analysts relies on Python for data processing,
+modeling, visualization, and predictive work in soccer and other sports.
+The strength of the ecosystem also provides practical advantages. Extensive docu‐
+mentation, community support, and open source collaboration make it easier to
+troubleshoot issues, learn new techniques, and build on existing work. This collective
+infrastructure lowers barriers while maintaining methodological rigor.
+Although this book focuses on soccer, the skills developed here extend well beyond
+a single sport. The workflows, libraries, and modeling patterns introduced in this
+chapter are widely applicable across machine learning tasks in many domains.
+Let’s now start the practical work: installing Python, creating a virtual environment,
+and launching Jupyter Notebook.
+Your Analytics Workspace: Setting Up the Environment
+A good analytical workspace should be organized, reproducible, and easy to return
+to. Before we write serious code, it helps to understand the four main pieces of that
+workspace: Python itself, a virtual environment, Jupyter Notebook, and repositories.
+Python is the main environment where the analysis takes place. A virtual environ‐
+ment keeps each project’s software dependencies separate, so one project does not
+accidentally interfere with another. You can think of this virtual environment as a
+dedicated training room inside a gym: each project has its own room and equipment,
+with the tools it needs arranged in one place. This separation also protects the rest
+of your computer from project-specific changes and makes your work easier to
+reproduce later.
+Jupyter Notebook gives you an interactive way to work through analysis step by step.
+Instead of running one large script all at once, you can organize your work into code
+cells for loading data, cleaning it, exploring patterns, training models, and evaluating
+results. That makes it especially useful for learning, experimentation, and iterative
+analysis.
+Your first step is to install Python. After that, we will set up a virtual environment and
+a Jupyter notebook so you can begin running and experimenting with Python code.
+16 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 37
+================================================================================
+For a quicker start, readers with a Google account can create
+a .ipynb Colaboratory file in Google Drive to begin using Jupyter
+Notebook immediately. If you choose Google Colab instead of
+working locally, you can skip the next two sections on virtual
+environments and how to create them!
+Installation: Getting Python Ready
+You can download and install Python directly from its download page. You can just
+install the most recent version for your operating system (typically Mac, Linux, or
+Windows) for now.
+Once Python is downloaded, run the installer and follow the prompts. To verify the
+installation, you’ll need to open a terminal or command prompt window. If you’ve
+never used one before, search your applications for Terminal or Command prompt
+(almost every computer comes with one preinstalled). Then, type the following
+command on the first line:
+python3 --version
+After pressing Enter, you should see the Python version number just below the
+prompt. In that case, the installation was successful.
+If you’re encountering errors, try specifying your exact problem (including the
+Python distribution number), your machine and exact operating system (such as
+macOS High Sierra or Windows 10), and the error you encountered in ChatGPT,
+Claude, or another chatbot of your choice. These chatbots can help guide you further
+if you’re stuck on errors.
+Virtual Environments: Isolating Your Projects
+A Python virtual environment is an isolated, self-contained directory that includes a
+specific Python installation and a set of additional packages. In practice, this virtual
+environment gives each project its own controlled software setup, so one project does
+not accidentally interfere with another.
+At first, creating a virtual environment for every project may feel like an extra
+step. In practice, that separation matters because Python projects often depend on
+specific library versions. A model you build today might rely on package versions that
+differ from the ones required by another project a few months later. If everything is
+installed into one shared environment, those dependencies can easily conflict.
+Virtual environments solve this by giving each project its own local combination of
+Python and libraries. That makes your work easier to reproduce, easier to debug, and
+less likely to break when you install new packages elsewhere on your machine. For
+exactly this reason, using virtual environments is a widely accepted best practice in
+software development. We will talk more about libraries in Chapter 3.
+Your Analytics Workspace: Setting Up the Environment 
+| 
+17
+
+
+================================================================================
+PAGE 38
+================================================================================
+Now, imagine that you’re working on two projects:
+• Project A requires Python 3.7 and TensorFlow 1.15.
+•
+• Project B requires Python 3.8 and TensorFlow 2.3.
+•
+The numbers 3.7 and 3.8 refer to specific releases of Python. TensorFlow is a com‐
+monly used package in machine learning that comes with its own releases. Such
+specific requirements typically arise because the project relies on particular function‐
+alities that are available in only certain versions of Python and/or any package.
+In addition, certain packages and Python versions cannot always be mixed. If a
+project depends on an older release of TensorFlow, for example, it may not work
+with every newer Python version. When that happens, a virtual environment gives
+you a safe place to install exactly the versions the project needs without disrupting
+anything else on your machine. If you are unsure about compatibility, the package
+documentation is usually the best place to check.
+A typical analyst will work on multiple projects over time, each with its own software
+requirements. Virtual environments keep those requirements separate and reduce the
+risk of version conflicts.
+To reiterate, here are the key features of virtual environments:
+Isolation
+Each virtual environment contains its own Python installation and packages,
+which helps prevent conflicts between projects.
+Project specificity
+You can create a setup for each project with exactly the dependencies it needs.
+Reproducibility
+Virtual environments make it easier to re-create the same software setup on
+another machine and obtain consistent behavior.
+To create and manage virtual environments, Python comes with a built-in tool called
+venv. It lets you build isolated spaces where your packages and dependencies can
+live—separate from the rest of your computer.
+Let’s create a virtual environment for a new project called soccer_analytics. The
+following command will use whichever Python version your python3 command
+points to, so make sure it refers to a recent installation.
+18 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 39
+================================================================================
+First, make sure you’ve installed Python (see “Installation: Getting Python Ready” on
+page 17). Then follow these steps:
+1. Create the environment:
+1.
+python3 -m venv soccer_analytics
+The flag -m tells Python to run a specific module rather than a plain script—in
+this case, venv, which creates the virtual environment.
+2. Activate the environment. Once you’ve created the environment, you need to
+2.
+activate it to work within it. How exactly to do that depends on your operating
+system.
+For macOS or Linux, you’ll type this in your terminal:
+source soccer_analytics/bin/activate
+For Windows, the command depends on whether you’re using Command
+Prompt (CMD) or PowerShell:
+soccer_analytics\Scripts\activate.bat  # for CMD
+.\soccer_analytics\Scripts\Activate.ps1  # for PowerShell
+The # symbol denotes a comment, so everything after it is only for humans and
+ignored by computers.
+After activating a virtual environment, the terminal prompt should change to
+show the name of the active environment (e.g., soccer_analytics appears at the
+start of the prompt).
+3. After you’re done working in the virtual environment, deactivate it. To deactivate
+3.
+the current virtual environment, you simply type in the terminal or command
+prompt:
+deactivate
+You will then return to the base environment on your main operating system, or
+to whichever state it was in before any environments had ever been activated.
+Multiple ways to create virtual environments exist, and new meth‐
+ods may still emerge. However, this approach is a tried-and-tested
+way to get you started fast.
+Your Analytics Workspace: Setting Up the Environment 
+| 
+19
+
+
+================================================================================
+PAGE 40
+================================================================================
+Jupyter Notebook: Creating a Workspace for Interactive Analysis
+and More
+Having a dedicated training room is not enough on its own. You also need a struc‐
+tured training routine—one that breaks your session into clear, ordered steps, and
+records what happened at each one. Think of a serious weightlifting program: you
+don’t just walk into the gym and lift randomly. You follow a sequence—biceps first,
+then legs, then core—and after each set, you log the weight, the reps, and how it felt.
+That record is invaluable. Without it, your training is essentially binary: either the
+session went well overall, or it didn’t—but if your training progress slows or you stop
+meeting your goals, you have no way of reviewing your specific progress or knowing
+what to tweak. Jupyter Notebook works precisely this way.
+The virtual environment you just created will allow you to run both Python scripts
+and Jupyter notebooks. Files that are Python scripts end with .py and are good for
+quick execution and production-grade models. A .py script is like completing your
+entire workout and checking the logbook only at the very end. You can see the final
+result, but if you pulled a muscle midway through the workout, tracing the exact
+move that caused it is difficult.
+However, when you’re still building and exploring, Jupyter notebooks are better.
+These files, which end with .ipynb, have transformed the way data scientists, research‐
+ers, and educators interact with code and data. Jupyter notebooks are great because
+they allow you to create and share documents that integrate not only live code but
+also equations, visualizations, and narrative text.
+Features and benefits of Jupyter notebooks
+Think of a Jupyter notebook as your structured training log come to life. Each cell
+is one step in your routine—one exercise, one set—and you can run it, immediately
+see the result, add a note explaining your reasoning, and only then move on to the
+next. If something goes wrong at the leg press, you know it was the leg press—
+not a mystery buried somewhere in an hour-long session. That kind of step-by-step
+visibility is exactly what makes Jupyter notebooks so powerful for exploration and
+analysis.
+Here is a more detailed overview of the features and benefits of Jupyter notebooks:
+Interactive computing
+They execute code in small, manageable chunks (as noted earlier, these are often
+known as cells). This capability supports rapid experimentation and iteration,
+simplifies debugging, and allows you to easily check out intermediate results.
+This is particularly helpful when you want to view outputs such as results or
+visualizations (e.g., plots), especially when working with data. Think of each cell
+as a single exercise set—you perform it, check your form in the mirror, adjust,
+20 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 41
+================================================================================
+and move on to the next one. You don’t have to complete the entire workout
+before finding out whether your technique was off.
+Visualization
+Notebooks enable inline display of a wide range of visualizations, which enhan‐
+ces data exploration and presentation. This makes data analysis more dynamic
+and informative. It’s like having a performance screen mounted on the wall
+of your training room, showing your stats in real time as you work through
+each set.
+Blended content
+Notebooks seamlessly integrate executable code with explanatory text, mathe‐
+matics, and rich media, resulting in comprehensive and self-documenting analy‐
+ses that are excellent for presentations. Imagine a training log that doesn’t record
+just your lifts but also includes coaching notes, diagrams of proper form, and
+video clips—all in one place, ready to share with your team.
+Extensibility
+Many plug-ins and extensions are available to enhance the functionality of
+Jupyter notebooks, such as tools for code formatting, magic functions, and more.
+Just as you might add a foam roller station, a heart-rate monitor, or a resistance
+band rack to customize your training room, you can extend Jupyter to suit
+exactly the way you like to work.
+In addition to all this, Jupyter notebooks support a wide range of programming
+languages, including R, which is another popular and powerful tool for statistical
+analysis. This makes them even more suitable for various data science and analytical
+tasks. Think of them as a multipurpose training room that accommodates not just
+one sport but several; whether you’re doing strength work, cardio, or mobility train‐
+ing, the room adapts to your needs.
+Your first notebook: Getting up and running
+You’re ready to set up your training room and get your first session underway. To
+launch a Jupyter notebook (which we sometimes just call Jupyter or a notebook for
+short), open a terminal and enter the following commands:
+pip install jupyter
+jupyter notebook
+The first command produces a lot of output; it gives you the ability to create and
+play around with Jupyter notebooks. Think of it as the delivery truck arriving with all
+your equipment—a lot is coming off the truck, but once it’s unloaded, your room is
+stocked. The second command opens a new browser window or tab with the Jupyter
+interface. Now, you can create a new notebook in Jupyter via the graphical user
+interface in your browser.
+Your Analytics Workspace: Setting Up the Environment 
+| 
+21
+
+
+================================================================================
+PAGE 42
+================================================================================
+Once you have a notebook up and running, click the first cell and run the following
+code. To execute a notebook cell, you can click the arrow in the top menu bar, or
+you can hit Shift-Enter—like snapping straight into your next exercise without losing
+your rhythm or breaking a sweat between sets:
+import sys
+import matplotlib
+import numpy as np
+import pandas as pd
+print(f"Python version: {sys.version}")
+print(f"NumPy version: {np.__version__}")
+print(f"Pandas version: {pd.__version__}")
+print(f"Matplotlib version: {matplotlib.__version__}")
+This code confirms that essential data science libraries are correctly installed. It’s your
+presession equipment check—making sure the barbells are loaded, the machines are
+functioning, and nothing is missing before you begin. We’ll talk more about libraries
+in Chapter 3, so don’t worry if you don’t understand what the preceding commands
+do just yet!
+If you encounter any errors at this point, create a separate cell with the + button, and
+use the up or down arrow to move the cell if needed. Then, you’ll need to run the
+following snippet in that cell (again, click the side arrow symbol or press Shift-Enter
+to execute it):
+%pip install matplotlib
+Note that you might need to change matplotlib to whichever library was throwing
+an error for you previously. This is like discovering that a piece of equipment is
+missing from your room and quickly ordering a replacement—a quick fix before the
+real training begins. Once all libraries are loaded, you have set up your first fully
+equipped training room—the right space, the right gear, all zones clearly marked, and
+everything in its place. Now you need to learn how to train.
+Repositories: Storing Your Project Files
+As you begin working with Python for analytics, you’ll quickly encounter the concept
+of a repository. A repository is a home for a project’s files. It keeps code, notebooks,
+datasets, and documentation together in one place so that you can return to them,
+organize them, and share them with others.
+Many repositories are hosted on platforms like GitHub. You may also come across
+similar platforms such as GitLab or Bitbucket. You do not need to become an expert
+in Git or GitHub right now to follow this book. For our purposes, it is enough to
+understand that a repository is the place where a project lives. In later chapters,
+you may download data files, notebooks, or example code from a repository that
+accompanies the book.
+22 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 43
+================================================================================
+Behind the scenes, repositories are usually managed with a version control system
+called Git. Version control keeps track of changes to files over time, which makes it
+easier to update a project, compare older and newer versions, and collaborate with
+other people without losing work. You do not need to learn Git in detail yet, but it
+helps to know that Git is the tool that makes repositories so useful.
+In practice, beginners usually interact with repositories in one of two ways:
+Download a ZIP file
+This is the simplest option if you just want a copy of the files on your computer.
+Clone the repository
+This creates a local working copy that is connected to the online version, which
+makes it easier to update your files later.
+If you’re new to this, think of a repository as your project’s locker room: everything
+related to the project is stored there in an organized way. Git then acts like the staff
+logbook that records what changed, when it changed, and who changed it, so the
+project is easier to manage over time. As we move into Chapter 3, this idea will
+become useful when we start working with real data and code files outside a single
+notebook.
+Python Basics: The Core Moves
+In soccer, you don’t need to know how to do a full Ronaldo chop to play a decent
+game (though we’d like to see you do that in due time as well). The ability to dribble,
+pass, and shoot is already going to get you from zero to being a respectable force to be
+reckoned with on the field.
+As a soccer data analyst, you’ll need to know some basic concepts. At this stage, a
+Jupyter notebook may feel unfamiliar and mostly empty—like stepping onto a soccer
+field for the first time without knowing how the game is played.
+Starting as a beginner is expected. We are here to help you grow your core Python
+skills step by step so you can navigate this environment effectively. As an analyst,
+you’ll work with data types, variables, loops, and other essential fundamentals.
+If that sounds a bit intimidating, don’t worry. We’ll go through all this step by step,
+and you’ll have plenty of time to revisit these concepts as you proceed through the
+book. If, on the other hand, you’re already somewhat familiar with these concepts,
+consider the remainder of this chapter like a warm-up exercise: revisit regularly but
+remember to take it easy!
+Python Basics: The Core Moves 
+| 
+23
+
+
+================================================================================
+PAGE 44
+================================================================================
+Primitive Data Types: Representing Basic Information
+As an analyst, your primary basis of work is data. Think of it as the soccer moves that
+players perform every day. Data comes in many forms. Various primitive data types,
+which are built-in in Python, represent single values. More complex data structures
+also exist and are discussed further in this chapter.
+The four fundamental primitive data types in Python are integers, floats, strings, and
+Booleans:
+• Integers are whole numbers like 2 goals, 38 league matches, or 90 minutes.
+•
+• Floats are numbers with decimal places like 0.73 xG or 61.5 possession.
+•
+• Strings are, well, strings of characters put together, like "Liverpool" or "Quarter
+•
+final"; they are always found inside single or double quotation marks.
+• Booleans can take only two possible values: True or False. They might sound
+•
+simplistic at first glance, but they’re quite handy for performing sanity checks,
+executing if statements, and representing details such as whether a pass was
+completed.
+A soccer player intuitively knows whether an excellent pass or a complete curveball
+is coming their way. As an analyst, you have a tool if your intuition isn’t enough:
+the type() function. (You’ll learn more about functions in “Functions: Providing
+Reusable Logic for Analysis” on page 36.) A function returns the type or class of
+whichever object you give it as an argument.
+Here are some examples using the type() function to determine the data type:
+print(type(True))
+print(type(2))
+print(type(0.73))
+print(type("Liverpool"))
+Note that you can execute these examples in your Jupyter notebook, and you’ll see
+that you get the same values. In this chapter, code examples are written as plain
+runnable snippets so you can copy them directly into a notebook cell. When it is
+helpful to show the result, we place it in a separate output block right after the code.
+If you run this code, you should see the following:
+<class 'bool'>
+<class 'int'>
+<class 'float'>
+<class 'str'>
+You can see that the data types are somewhat abbreviated. As you might have
+expected, the values True, 2, 0.73, and "Liverpool" are boolean, int, float, and
+string types, respectively.
+24 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 45
+================================================================================
+Consider these primitive data types your basic passes and dribbles, which you will use
+constantly to represent soccer-related data. If you want to combine different moves
+(like dribbling and then passing to get the ball over to your striker), you’ll need some
+operations to glue those moves together.
+Basic Operations: Working with Values and Comparisons
+Sometimes you’ll need to combine a dribble and a pass. In your world as an analyst,
+you have operations to combine data types. They fall into two groups: arithmetic
+operations and comparisons.
+Let’s look at these basic operations. We’ll use the same conventions as in the example
+in the preceding section. In this chapter, comments are kept brief and used only when
+they add clarity. Here are some examples:
+print(1 and True)
+print(0 or 1)
+print(5 > 1)
+print(1 > True)
+print(1 + 5)
+print(True * 5)
+print(5 / 2)
+print(7 ** 2)
+print("Team A" + ":" + "Win")
+This produces the following:
+True
+1
+True
+False
+6
+5
+2.5
+49
+'Team A:Win'
+You’ll notice that 1 is regarded as equivalent to True (see the first line). Conversely, 0
+is equivalent to False. This can come in handy when you don’t want to type out the
+words True and False.
+The second expression, 0 or 1, returns 1 because it’s true that anything is either
+False (0) or True (1). Conversely, if you typed 0 and 1 into your notebook cell and
+executed it, it would return 0 or False, because nothing can be True and False at the
+same time.
+The symbols < and > are basic comparisons. It’s true that 5 is bigger than 1. But it’s not
+true that True (i.e., 1 as we now know) is bigger than 1.
+Python Basics: The Core Moves 
+| 
+25
+
+
+================================================================================
+PAGE 46
+================================================================================
+Other standard math operations like + work too. They even hold up for True and
+False, which are then just interpreted as 1 and 0, respectively. The symbol ** denotes
+exponentiation. This means that 7 ** 2 is the same as the multiplication 7 * 7.
+Analogously, 7 ** 3 is the same as 7 * 7 * 7, and so on.
+Finally, strings of characters can be joined using the + operator. So here we’re not
+talking about an addition in the mathematical sense but rather about gluing several
+strings together. Hence, the three strings "Team A", ":", and "Win" can be glued
+together to form the new string "Team A:Win".
+Variable Assignment: Storing and Reusing Information
+Sometimes you know the objective is to move the ball from your own penalty area up
+to the halfway line, but you are not yet sure how to execute it. Do you dribble forward
+under pressure, or pass to a teammate to help progress the play?
+In soccer analytics, this reflects a more general problem: you often need to represent
+something before it is fully known. For example, when analyzing your favorite team’s
+performance, you do not know in advance how many goals it will score in a match.
+The outcome depends on many factors, including opponent strength, match context,
+and a degree of randomness.
+In Python, we handle this kind of uncertainty using variables. A variable is a named
+container for a value that can be stored, updated, and reused throughout your analy‐
+sis. For example, you might create a variable called home_team_goals and assign it a
+value as your analysis develops. This process is called variable assignment, and it is
+one of the most fundamental concepts in Python and in programming more broadly.
+Variables are powerful because they allow you to store and reuse information effi‐
+ciently. You can update a variable at any time and automatically use its most recent
+value throughout your code. For instance, if you initially assume your team will
+score three goals but you later update that expectation to two, you do not need to
+change every instance in your code. You simply update home_team_goals, and all
+downstream calculations will reflect the change when the code is rerun. This makes
+code easier to maintain, less error-prone, and more flexible when working with
+real-world data.
+Here is an example of two variables being assigned and then accessed:
+home_team_goals = 2
+away_team_goals = 1
+print(home_team_goals)
+print(away_team_goals)
+This prints the following:
+2
+1
+26 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 47
+================================================================================
+So here you have that your home team scored two goals, and the away team scored
+one goal. This example uses snake case for naming: words are separated with under‐
+scores, and all letters remain lowercase. Examples include home_team_goals and
+away_team_goals. You will often see snake case in Python code, libraries, and docu‐
+mentation, and in this book we’ll keep our own examples consistent by mainly using
+it in our variable names.
+Another naming convention you may encounter is camel case: the first letter of each
+word after the first is capitalized, as in homeTeamGoals. Recognizing both styles is
+useful, but for consistency we will stick to snake case in our examples.
+Whichever naming style you choose in your own work, the important point is to pick
+one convention and stick to it as much as you can. When you follow a consistent
+convention, you’ll find it easier to keep an overview of all your variables and keep the
+code clean if you add more functionalities later.
+Data Structures: Organizing Information
+Sometimes counting goals in a single match is not enough. You may want to store
+data across multiple games or track all results for a specific team over a season. At this
+point, simple data types are no longer sufficient.
+To move to the next level, you need more structured ways to organize data. In
+Python, lists, tuples, dictionaries, and sets provide that foundation. These data struc‐
+tures allow you to store and manage groups of values.
+Each structure has a different level of flexibility and organization. Table 2-1 provides
+a high-level overview of how these data structures compare.
+Table 2-1. Overview of the four data structures
+Data structure Ordered?
+Changeable? Duplicate values
+allowed?
+Typical use
+List
+Yes
+Yes
+Yes
+Storing a sequence of values you may want to update or
+slice
+Tuple
+Yes
+No
+Yes
+Storing a fixed record that should not change
+Set
+No
+Yes
+No
+Storing unique values and comparing collections
+Dictionary
+Yes
+Yes
+Keys must be unique
+Storing values by name, using key-value pairs
+Lists: Ordered and flexible collections
+A list in Python is just an array of several data entries. You can assign a list to a
+variable so you can play around with it later. That is basically like giving the list a
+name so you can call it when you need it.
+Python Basics: The Core Moves 
+| 
+27
+
+
+================================================================================
+PAGE 48
+================================================================================
+Like a regular to-do list, a list in Python has specific properties. It usually has a length,
+indicating the number of items in it. You can find out the length with the built-in
+function len(). You can also find out the maximum and minimum values in a list with
+max() and min(), respectively (as long all items are integers or floats, this will work).
+And you can slice lists, or select a subsection of them. Note that in Python, the
+counter starts with 0 and not with 1, so the first item on a list is called with the
+index 0.
+In the following example, we’re counting the goals a team has scored over multiple
+games. We can figure out the number of games they played, the most goals scored in
+a single game, and the number of goals scored in the first three games:
+goals_per_game = [0, 1, 1, 0, 2]
+print(len(goals_per_game))
+print(max(goals_per_game))
+print(goals_per_game[0:3])
+This prints the following:
+5
+2
+[0, 1, 1]
+We can see that the team played five games and scored a maximum of two goals in
+any of those games. To get a list of goals scored per game in the first three games, we
+use goals_per_game, with the expression [0:3], which is a slice that extracts a subset
+of the list.
+When we slice a list, 0 is the start index. The start index is always inclusive, which
+means that the element at that index is taken into account. In the preceding case, 3
+is the end index. The end index is always exclusive, which means that the element
+at that index is not taken into account. This is why you find only the elements at
+positions 0, 1, and 2 in the returned output, but not the element at position 3 (the
+fourth element). Therefore, [0:3] returns the elements from index 0 up to, but not
+including, index 3. In this example, the team scored no goals in the first game, one in
+the second, and one in the third.
+Lists are particularly well suited for representing sequences such as goals or other
+statistics, and they make it easy to access specific entries through slicing. Although it’s
+possible to mix data types within lists, maintaining consistency—such as using only
+integers—is cleaner and generally leads to fewer unexpected errors.
+Tuples: Fixed records and immutable structure
+Tuples are immutable sequences, meaning they cannot be changed after creation. This
+makes them different from lists, because you can modify lists however you like. To
+create tuples, you use parentheses instead of square brackets.
+28 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 49
+================================================================================
+For example, let’s say that we have a tuple for the result of a match, indicating the
+number of goals each team scored. We might also want to store one team’s past points
+records in the league, just for good measure. If we try to tamper with either tuple,
+we’ll run into trouble:
+match_result = (2, 1)
+points_record = (3, 0, 1)
+try:
+    match_result[0] = 4
+except TypeError as error:
+    print(f"Error: {error}")
+This prints the following:
+Error: 'tuple' object does not support item assignment
+You can see that the tuple is immutable because trying to manipulate the first entry
+(or any entry, for that matter) results in an error message. Tuples are therefore very
+useful when you need to make sure you’re not making mistakes, or when you’re
+relying on historical records that cannot change because they happened in the past.
+Sets: Collections of unique elements
+Sets are useful for storing unique data. Unlike tuples, order doesn’t matter, and no
+duplicates are allowed. Unlike tuples, sets are also changeable; you can add or remove
+elements after creating them. Sets are thus useful for maintaining unique collections
+such as team IDs or names.
+What’s great about sets is that you can compare them. For example, if you want
+to find out which players both scored a goal and received a red card in the last
+game, you could check the intersection between the set that contains the players
+who have scored a goal and the set that contains the names of the players who got
+a red card. To do this, you’d use the & operator. If, on the other hand, you want
+to find all the players who either scored a goal or got a red card, or both, you
+should use the | operator. And if you want to obtain the names of the players who
+scored but did not get a red card, you should use the - operator. Here’s how it works
+in detail:
+players_scored_last_game = {"Lionel Messi", "Cristiano Ronaldo"}
+players_received_red_card = {"Cristiano Ronaldo", "Luis Suárez"}
+all_unique_players = sorted(
+    players_scored_last_game | players_received_red_card
+)
+players_scored_not_red_card = sorted(
+    players_scored_last_game - players_received_red_card
+)
+players_scored_and_red_card = sorted(
+    players_scored_last_game & players_received_red_card
+)
+print(f"All unique players: {all_unique_players}")
+Python Basics: The Core Moves 
+| 
+29
+
+
+================================================================================
+PAGE 50
+================================================================================
+print(
+    f"Players who scored but did not receive a red card: "
+    f"{players_scored_not_red_card}"
+)
+print(
+    f"Players who scored and received a red card: "
+    f"{players_scored_and_red_card}"
+)
+Here are the results:
+All unique players:
+['Cristiano Ronaldo', 'Lionel Messi', 'Luis Suárez']
+Players who scored but did not receive a red card:
+['Lionel Messi']
+Players who scored and received a red card:
+['Cristiano Ronaldo']
+You can do many more things with sets, but generally they help you play around with
+various data points and their properties. These comparative operations are unique to
+sets and can’t be used for lists, tuples, or dictionaries.
+Dictionaries: Key-value organization
+Lists, tuples, and sets are great, but sometimes you need to move beyond indexes in
+order to find specific values. For example, if you want to find everything out about a
+team (let’s call it team A), storing all kinds of data points about overall goals, current
+standings, and points in its league in one list won’t be useful. You’ll lose track of
+which entry is which!
+This is where a dictionary comes in handy. You can describe each value with a key,
+such as average_goals_made or current_standing to keep track of various entries.
+What’s more, you can then access those entries just by using the keys. In the next
+example, you’ll create a dictionary for the achievements of team A and then call and
+print one of the elements of that dictionary. We’ll use this naming convention:
+• We define average_goals_made as the average number of goals a team scores per
+•
+game.
+• The average number its opponents score is average_goals_conceded.
+•
+• The average_winning_rate is the proportion of games the team typically wins.
+•
+• The current_standing is the team’s standing in the league right now.
+•
+• The number of points the team has collected is points.
+•
+30 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 51
+================================================================================
+Here’s how we retrieve a value from a dictionary:
+team_a_stats = {
+    "average_goals_made": 2.5,
+    "average_goals_conceded": 1.2,
+    "average_winning_rate": 0.75,
+    "current_standing": 1,
+    "points": 45,
+}
+print(
+    "Team A's average goals made: "
+    f"{team_a_stats['average_goals_made']}"
+)
+This prints the following:
+Team A's average goals made: 2.5
+The last piece of code takes advantage of Python’s print() function, which helps
+you print anything you want onto the screen. The f within the parentheses of
+the print statement helps Python understand that you want it to print out the
+contents of a variable. That variable comes in curly braces, and in this case is
+team_a_stats['average_goals_made'], whose value tells you the number of goals
+team A made on average, which is stored under the key "average_goals_made" in
+the dictionary team_a_stats.
+Dictionaries go beyond just storing simple values. You can store any data type in
+dictionaries, such as lists or tuples, or even other dictionaries:
+league_stats = {
+    "Team A": {
+        "average_goals_made": 2.5,
+        "average_goals_conceded": 1.2,
+        "average_winning_rate": 0.75,
+        "current_standing": 1,
+        "points": 45,
+    },
+    "Team B": {
+        "average_goals_made": 1.8,
+        "average_goals_conceded": 1.5,
+        "average_winning_rate": 0.60,
+        "current_standing": 2,
+        "points": 38,
+    },
+    "Team C": {
+        "average_goals_made": 1.6,
+        "average_goals_conceded": 1.7,
+        "average_winning_rate": 0.55,
+        "current_standing": 3,
+        "points": 33,
+    },
+}
+Python Basics: The Core Moves 
+| 
+31
+
+
+================================================================================
+PAGE 52
+================================================================================
+print(
+    f"Team A's average goals made: "
+    f"{league_stats['Team A']['average_goals_made']}"
+)
+for team_name, team_stats in league_stats.items():
+    goals_per_match = team_stats["average_goals_made"]
+    print(
+        f"{team_name}: {goals_per_match:.2f} "
+        f"average goals made per match"
+    )
+This prints the following:
+Team A's average goals made: 2.5
+Team A: 2.50 average goals made per match
+Team B: 1.80 average goals made per match
+Team C: 1.60 average goals made per match
+If you are typing multiline code into Jupyter yourself, each indented line must keep
+its leading spaces. Python uses indentation to define blocks, so if copied code picks
+up extra spaces or loses them, Jupyter may raise an IndentationError.
+The last bit of the code example is more advanced. It includes not only a print()
+statement, but also a new variable, goals_per_match, that we created from the dic‐
+tionary entry with the key "average_goals_made", and all this runs over all the
+dictionaries within the main dictionary by means of a for loop. If you feel a bit con‐
+fused by this, don’t worry. Revisit this example after you’ve read “Loops: Repeating
+Computation Efficiently” on page 33.
+Conditional Statements: Writing Decision Rules
+Once you’re playing around with sets, you’ll be getting into the habit of comparing
+and combining things. To make this easier, if statements can be very useful. Also
+called conditional statements, they are an essential concept for decision making in
+programming.
+In most soccer leagues, the standings are determined using a points system. We’re
+likely not telling you news here: a team gets 3 points for a win, 1 point for a draw, and
+0 points for a loss.
+We can implement these rules programmatically with conditional statements. But
+first, here’s one small but important detail for beginners: the symbol = assigns a value
+to a variable, while == checks whether two values are equal. For example, points = 3
+stores the value 3 in points, whereas team_goals == opponent_goals asks whether
+the two scores are the same. Here’s an example:
+team_goals = 2
+opponent_goals = 1
+if team_goals > opponent_goals:
+32 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 53
+================================================================================
+    points = 3
+    result = "Win"
+elif team_goals == opponent_goals:
+    points = 1
+    result = "Draw"
+else:
+    points = 0
+    result = "Loss"
+print(f"Result: {result}, Points: {points}")
+This prints the following:
+Result: Win, Points: 3
+In this example:
+• If team_goals is greater than opponent_goals, the team wins and earns 3 points.
+•
+• If team_goals is equal to opponent_goals, the match is a draw, and the team
+•
+earns 1 point.
+• If team_goals is less than opponent_goals, the team loses and earns 0 points.
+•
+You can see that conditionals typically come with a comparison of sorts. More
+generally speaking, the expression is if [something is true]: [do this], else [do
+that]—where the expressions in square brackets should be replaced by something
+computer-readable.
+Loops: Repeating Computation Efficiently
+We encountered a for loop in “Dictionaries: Key-value organization” on page 30.
+Loops allow you to process data in batches so you don’t have to type out many opera‐
+tions that would happen again and again anyway. Thus, by iterating through (large)
+datasets, you can compute metrics such as goals per game and average possession
+percentages without having to write repetitive code.
+Our first example iterates over a list we call points_list, which contains the points
+earned over three matches. We now are summing the points from points_list in
+order to compute the total points a team accumulated in the past three games:
+points_list = [3, 1, 0]
+total_points = 0
+for points in points_list:
+    total_points += points
+print(f"Total points accumulated: {total_points}")
+This prints the following:
+Total points accumulated: 4
+Python Basics: The Core Moves 
+| 
+33
+
+
+================================================================================
+PAGE 54
+================================================================================
+You can see here a for loop that iterates over each element in points_list. Each
+element in that list is temporarily called points, just so we can refer to it. There’s
+a total points count, total_points, which is initially 0 and to which we add each
+element from inside points_list. The operator += is a common shortcut. Another,
+longer expression for that same line would be total_points = total_points +
+points.
+Our second example uses the function zip() to iterate over team_goals and
+opponent_goals simultaneously, thus calculating both standing points at the same
+time. This zip() function is extremely useful for unpacking elements in multiple data
+structures (e.g., lists). If the data structures are not the same length, zip() stops as
+soon as the shortest one runs out of elements.
+In this example, three games have been played, and now we want to know how many
+points the home team has gathered in the league. Here’s how that looks in code:
+team_goals = [2, 1, 3]
+opponent_goals = [1, 2, 1]
+total_points = 0
+for goals_scored, goals_conceded in zip(
+    team_goals, opponent_goals
+):
+    if goals_scored > goals_conceded:
+        total_points += 3
+    elif goals_scored == goals_conceded:
+        total_points += 1
+print(f"Total standing points: {total_points}")
+Here’s the output:
+Total standing points: 6
+Aside from for loops, Python has while loops. Their mode of functioning is along
+the lines of while [something is true]: [do something], and the loop stops when the base
+condition becomes false. These loops are fairly rare because they carry the danger
+of going on forever or even crashing your computer; nevertheless, they can occur
+sometimes.
+You can also place loops inside other loops. For example, if you have a list of lists,
+and you want to do something with each element, you might make a for loop to
+loop through the outer loop and then another for loop to find the elements in the
+sublists. These techniques are somewhat advanced, and we’ll explain in detail what’s
+happening when examples of this come up in this book.
+34 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 55
+================================================================================
+List Comprehensions: Performing Compact and Pythonic Iteration
+Often in data analysis, you want to build a new list from data you already have.
+You might transform values, filter them, or compare one sequence with another. List
+comprehensions are a concise way to directly define such a list.
+You enclose them in square brackets, just like lists, and the output is indeed a list.
+Python still loops through the underlying data for you, but the main idea is not here is
+a shorter loop. The main idea is here is the list I want to create.
+The following example shows the same result written first as a traditional loop and
+then as a list comprehension:
+squares = []
+for number in range(10):
+    squares.append(number ** 2)
+print(squares)
+squares = [number ** 2 for number in range(10)]
+print(squares)
+The output is as follows:
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+You can also use zip() within a list comprehension. We’ll reuse our example where
+three games have been played and we have the goals scored by each team. Now we’re
+trying to find out the number of games won by the home team:
+home_goals = [2, 1, 3]
+away_goals = [1, 2, 1]
+home_wins = [
+    home > away for home, away in zip(home_goals, away_goals)
+]
+print(f"Home wins: {home_wins}")
+This prints the following:
+Home wins: [True, False, True]
+Here, home_wins returns True if home goals exceed away goals (i.e., if the home team
+won). In this case, this is not a one-liner because we still had to define home_goals
+and away_goals beforehand. Nevertheless, the list comprehension gives us a clear
+way to describe the list we want: one Boolean value for each match, indicating
+whether it was a home win.
+Sometimes, however, loops won’t get you where you want to be. What if there is no
+specific data structure to iterate through, yet you keep accomplishing the same moves
+nevertheless? In a game, you might perform the same type of pass over and over
+again, but it’s not like you’d be called to perform it whenever the clock strikes an hour.
+Python Basics: The Core Moves 
+| 
+35
+
+
+================================================================================
+PAGE 56
+================================================================================
+You’ll have to pass whenever you’re asked to. This calls for a function—in this case, a
+pass function.
+Functions: Providing Reusable Logic for Analysis
+Functions are essential in computer programming for encapsulating reusable pieces of
+code. For instance, a function can be used to calculate the points accumulated by a
+soccer team. Here is an example of this in action:
+def calculate_points(games: list) -> int:
+    """Return total points from goal pairs."""
+    total_points = 0
+    for goals_scored, goals_conceded in games:
+        if goals_scored > goals_conceded:
+            total_points += 3
+        elif goals_scored == goals_conceded:
+            total_points += 1
+    return total_points
+games = [(2, 1), (1, 1), (3, 0), (0, 2)]
+total_points = calculate_points(games)
+print(f"Total points accumulated: {total_points}")
+This prints the following:
+Total points accumulated: 7
+This function loops through past results, adds 3 points for each win and 1 point for
+each draw, and returns the total. It takes as an argument games, which is a list of
+tuples specifying the outcome of past games.
+The expression in triple quotation marks is a docstring. Like a long expression after
+a # symbol, it helps humans understand what a function or code block does without
+having to read the code itself. The docstring in this example is intentionally short, but
+it still tells us what the function expects and what it returns.
+What’s great about this function (and any function) is that you can feed it any argu‐
+ment you want, and it will automatically re-execute the whole code you wrote on a
+new argument. You’ll be encountering functions again and again in this book because
+they’re that essential. To avoid having trouble with calling functions, make sure that
+the argument has the data type and structure that is expected for the function to
+work!
+Looking Ahead: From Python Basics to Real Analysis
+At this point, the most important part of the setup is in place. You now have a work‐
+ing analytical environment, a sense of how notebooks and repositories fit into your
+workflow, and a first practical toolkit for working with Python itself. That toolkit
+includes the building blocks you will rely on throughout the rest of the book: data
+36 
+| 
+Chapter 2: Python Fundamentals: Building Your Analytics Toolkit
+
+
+================================================================================
+PAGE 57
+================================================================================
+types, operations, variables, data structures, conditionals, loops, list comprehensions,
+and functions.
+This is a substantial amount of material, so don’t worry if it does not yet feel fully
+natural. Like technical training on the pitch, these skills become more fluent through
+repetition, not through a single reading. If something still feels abstract, the best next
+step is simple: run the examples, modify them, and see what changes. That kind of
+hands-on experimentation is where confidence begins to grow.
+You can also return to this chapter whenever you need to refresh a concept or
+double-check a piece of syntax. Its purpose is not just to introduce Python once but
+to serve as a stable reference point as the analysis becomes more complex.
+In Chapter 3, we will start putting this foundation to work on real soccer data.
+That means moving beyond the training ground and into exploratory data analysis:
+loading data, inspecting it, visualizing it, and beginning to ask meaningful analytical
+questions. The tools from this chapter will now start becoming part of a full analytical
+workflow.
+Conclusion
+Establishing a robust computational environment is the crucial first step in transi‐
+tioning from conceptual soccer analytics to practical implementation. In this chapter,
+we have laid the groundwork by setting up Python, configuring isolated virtual
+environments, and introducing Jupyter Notebook as an interactive workspace. By
+mastering the core syntax and data structures—such as lists, tuples, sets, and diction‐
+aries—along with control flow mechanisms like loops and conditional statements,
+you now possess the fundamental tools required to manipulate and analyze data
+programmatically. These foundational skills are not just abstract exercises; they are
+the building blocks used to process match events, calculate performance metrics, and
+structure the datasets that drive modern soccer insights.
+With this technical foundation in place, the focus now shifts from learning the
+language to applying it to real-world scenarios. The programming habits developed
+here—writing reusable functions, managing dependencies, and organizing code logi‐
+cally—will serve as a reliable anchor as the complexity of our analysis increases. In
+the next chapter, we will move beyond these basic constructs and dive into explora‐
+tory data analysis, where we will load actual soccer datasets, visualize patterns on the
+pitch, and begin extracting the meaningful signals that inform predictive modeling.
+Conclusion 
+| 
+37
+
+
+================================================================================
+PAGE 58
+================================================================================
+
+
+================================================================================
+PAGE 59
+================================================================================
+CHAPTER 3
+Exploratory Data Analysis in Soccer
+In Chapter 2, you built a toolkit of essential Python skills. Now, it’s time to put those
+skills to work on real soccer data. This chapter introduces exploratory data analysis
+(EDA), the initial, open-ended process of inspecting a dataset to understand its struc‐
+ture, find patterns, and identify anomalies. Just as a coach studies match footage before
+deciding on tactics, EDA is a structured investigation of the data. It’s how analysts gain
+their first understanding of what has been recorded, how often, and where the gaps
+or oddities lie. Instead of jumping straight to predictive models, we start by asking
+simple questions to build intuition. This crucial first step prevents us from drawing
+conclusions on shaky ground and lays the foundation for all subsequent analysis.
+As we perform EDA, we’ll see how to adapt general-purpose data science tools
+into soccer-specific analyses. Rather than just counting rows or calculating averages,
+we’ll explore passing networks, shot distance distributions, and team-level tactical
+patterns. These summaries will appear again in later chapters—for example, when we
+evaluate classification models in Chapter 5 or engineer features in Chapter 8.
+By the end of this chapter, you will have a repeatable workflow for exploring any
+soccer dataset. You will be able to do the following:
+• Load, inspect, and clean raw match data from formats like JavaScript Object
+•
+Notation (JSON) and comma-separated values (CSV).
+• Structure your analysis by data type (numerical, categorical, and ordinal)
+•
+• Aggregate event-level data into meaningful team and player summaries
+•
+• Create publication-ready visualizations, from standard bar charts to soccer-
+•
+specific heatmaps and passing networks.
+• Translate raw numbers into tactical insights about team and player styles
+•
+39
+
+
+================================================================================
+PAGE 60
+================================================================================
+The goal is to establish a rhythm: explore, clean, visualize, and interpret. Once you
+are comfortable with this process, you will be ready to move from describing what
+happened to predicting what might happen next.
+Understanding Soccer Data Levels
+Before we dive into the data, let’s talk about how it’s organized. Think of it like
+watching a game from different perspectives. You could be in a helicopter seeing the
+whole stadium, on the sideline watching the teams, or right on the pitch following
+a single player. Soccer data has a similar layered structure, and understanding these
+levels is crucial because the kinds of questions you can answer depend on the level of
+data you have.
+Match-Level Data
+Match-level data is the 30,000-foot view. It gives you the final score, the teams that
+played, the competition name, and the date. It’s the kind of information you’d find
+on a scoreboard or fixture list. Match-level data can describe a single match or be
+aggregated across many matches—for example, all games in the group stage of a
+tournament. Match-level data is perfect for answering high-level questions like these:
+• Who won the most games in the group stage?
+•
+• Which teams scored the most goals in the tournament?
+•
+• How many matches went to extra time?
+•
+You can’t analyze a team’s passing patterns with only match-level data, but you can
+identify trends across competitions and seasons. It’s the foundation for tournament
+analysis and league standings.
+Player-Level Data
+Now we’re on the sideline. Player-level data tracks the performance of individual
+players across a match or tournament. How many goals did Megan Rapinoe score?
+How many kilometers did Sam Kerr run? How accurate were Alex Morgan’s passes?
+Player-level data is often aggregated from finer-grained event data and helps us
+compare players across roles and teams. It’s essential for the following:
+• Player recruitment and scouting
+•
+• Performance evaluation and ratings
+•
+• Fantasy soccer and player awards
+•
+• Assessment of individual contributions to team success
+•
+40 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 61
+================================================================================
+Event-Level Data
+Event-level data provides the most granular view, putting you right on the pitch with
+the players. It records every individual event in a match—each pass, shot, tackle,
+dribble, or foul—along with who did it, where it happened on the pitch, and when.
+Event data does not, however, tell you where all the other players were on the pitch at
+that moment; it tracks only on-ball actions.
+In soccer analytics, the term event refers specifically to any discrete on-ball action that
+changes or continues possession. It doesn’t mean tournament or competition event, as
+in everyday English.
+Event-level data allows analysts to study these elements:
+• Tactical patterns and team formations
+•
+• Player actions and decision making
+•
+• The flow and momentum of matches
+•
+• Spatial control and territorial dominance
+•
+The beauty of event-level data is that you can aggregate it upward to create player-
+level or match-level summaries—but not the other way around. Once you have event
+data, you can answer questions at any level of detail.
+Understanding these levels is crucial because each connects to a different class of
+analytical questions. You can’t determine a tournament winner from a single pass,
+just as you can’t analyze a team’s passing structure with only match-level data. In
+this book, we’ll work with all three levels, often combining them to build a complete
+analytical picture.
+What Is EDA in Soccer Analytics?
+To carry out EDA, we need the right equipment. Just as boots, shin guards, and
+jerseys prepare a player for the pitch, Python libraries equip an analyst to handle data
+effectively.
+From Chapter 2, you already have the Python basics: variables, loops, and functions.
+Now we add a few essential tools that you will see throughout the rest of the book:
+NumPy
+The training ground where raw numbers become arrays and matrices.
+pandas
+Your match sheet and playbook. It organizes messy JSON or CSV files into tidy
+DataFrames, like putting players in positions on the pitch.
+What Is EDA in Soccer Analytics? 
+| 
+41
+
+
+================================================================================
+PAGE 62
+================================================================================
+Matplotlib and Seaborn
+Your chalkboard. They let you sketch charts and diagrams that reveal tactics
+hidden in the numbers.
+mplsoccer
+Your tactical board. It lets you visualize data directly on a soccer pitch, bringing
+analysis to life.
+The mplsoccer library is not part of the standard Anaconda dis‐
+tribution. You will likely need to install it yourself. From your
+command line, you can install it with pip:
+pip install mplsoccer
+All these libraries are free to use. Once they’re installed, you can import them into
+your notebook with a few lines:
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from mplsoccer import Pitch, VerticalPitch
+These will cover most of the work in this chapter. Later, we will bring in scikit-learn
+and deep learning libraries as the analysis grows more ambitious.
+Like players showing up to a Champions League match, you don’t want to take the
+field under-equipped. NumPy, pandas, and your plotting tools are the core kit that
+lets you start exploring soccer data with confidence.
+Loading StatsBomb Soccer Data
+Before we can analyze any match, we need data. For this chapter (and some later
+ones, such as Chapter 8), we will use the open dataset provided by StatsBomb Open
+Data. StatsBomb is a well-regarded provider in the soccer analytics community, and
+its open release is one of the most detailed event datasets available; every pass, shot,
+dribble, foul, and player position is carefully logged. Alongside these events, the
+dataset also contains match metadata and team lineups.
+In this chapter, we will focus on the 2019 FIFA Women’s World Cup (WWC). The
+data is published under a permissive license, free to download, and widely used
+in both research and practice. Working with it here prepares you for many of the
+formats you will encounter in real-world soccer analytics.
+42 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 63
+================================================================================
+Getting the Data
+The StatsBomb data lives on GitHub, a popular repository for code and data of all
+types. To download it, open your command line editor and type the following:
+mkdir soccer-data && cd soccer-data
+git clone https://github.com/statsbomb/open-data.git
+The StatsBomb open-data repository is quite large (around 15 GB).
+Before cloning, it is a good idea to create a dedicated directory for
+it to keep your projects organized.
+This command fetches the full history of StatsBomb’s open data. Depending on your
+connection, it can take 10 minutes or more—after all, you are pulling down years of
+professional match data.
+Once the command finishes, you will see a folder called open-data with several
+subfolders. The most important one is data/, which contains the actual JSON files.
+Each match, lineup, and event log is stored as a separate JSON file, organized by
+competition and season.
+For the 2019 WWC, the matches live in the following location:
+open-data/data/matches/72/30.json
+Here, 72 is the competition ID for the Women’s World Cup, and 30 is the season
+ID for 2019. The .json extension indicates JSON, a format that represents structured
+data as nested lists and dictionaries. JSON is widely used in sports analytics because it
+can capture complex, hierarchical information—such as a pass with its start location,
+outcome, and assisting player—while still being machine-readable.
+Loading the Data
+With the files on disk, the next step is to load them into a structure that is easy
+to analyze. In Python, that structure is the pandas DataFrame. A DataFrame is
+essentially a smart table. It combines the familiarity of a spreadsheet with the power
+of a database query, and it is optimized for fast computation. Once your data is in a
+DataFrame, you can filter, group, and summarize it with just a few lines of code.
+Let’s load the 2019 WWC match data into a DataFrame called matches_df:
+import json
+import numpy as np
+import pandas as pd
+from pathlib import Path
+BASE = Path("open-data/data")  # Adjust if needed
+# Load all WWC 2019 matches
+Loading StatsBomb Soccer Data 
+| 
+43
+
+
+================================================================================
+PAGE 64
+================================================================================
+matches = json.load(open(BASE / "matches/72/30.json", "r"))
+matches_df = pd.json_normalize(matches, sep="_")
+print("Number of matches:", len(matches_df))
+matches_df.head()
+If you run this code in a Jupyter notebook, the output confirms that 52 matches
+were loaded. The pd.json_normalize() function is particularly useful here; it
+takes the nested JSON structure and flattens it into a clean DataFrame with
+columns like match_id, competition_stage_name, and season_name. Note that
+after normalization, nested fields such as home_team.home_team_name become
+home_team_home_team_name (using the sep="_" argument).
+At this point, you are no longer looking at abstract JSON text. You have real soccer
+matches, organized in a way that lets you start asking questions.
+Taking a First Look at the Data
+Before setting up tactics, a coach scans the team sheet to see who is available. Our
+equivalent is a quick inspection of the DataFrame: what columns do we have, what
+types of values, and where are the gaps? These checks tell us whether the data is ready
+for analysis and highlight areas to revisit later.
+The pandas library provides two handy methods for this first look:
+# Basic structure of the matches DataFrame
+matches_df.info()
+# Quick descriptive stat
+matches_df.describe()
+The info() method reports the number of rows, column names, and data types
+(integer, string, float). This is like glancing at the lineup: who is on the field and in
+which position. The describe() method summarizes numeric columns with counts,
+averages, and ranges. This is like scanning player stats to see how experienced or
+balanced the squad is.
+From these summaries, we can already answer basic but useful questions: how many
+matches were played, which tournament stages are included, and which teams par‐
+ticipated. It is the analytical equivalent of the kickoff—you have the ball, you know
+the shape of the field, and you are ready to move it forward.
+Later in this chapter, we will go deeper by loading the event data (passes, shots,
+tackles) and the lineups (players and positions) for each match. For now, we have
+taken our first touch: the dataset is on the pitch, and we can start to play with it.
+44 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 65
+================================================================================
+Structured EDA by Data Types
+Now that we have the ball, it’s time to get a feel for it. A structured approach to
+exploratory analysis means handling each type of data with techniques suited to its
+nature. In our soccer dataset, we’ll encounter three main types of features—numerical,
+categorical, and ordinal—each requiring different analytical and visualization tools.
+Numerical Features: The Quantifiable Game
+Numerical features are the measurable quantities in our dataset. They can be continu‐
+ous, like the length of a pass or the distance of a shot, or discrete, like the number of
+goals scored or shots taken. Together, they form the backbone of soccer analytics.
+Continuous variables
+Continuous numerical variables can take any value within a range, rather than fixed
+steps. In soccer data, examples include the following:
+• Pass length (measured in meters)
+•
+• Shot distance from goal
+•
+• Player speed and distance covered
+•
+• Expected goals (xG) values
+•
+Let’s explore one simple continuous feature: the distribution of xG values across all
+shots in the tournament. Since xG is a probability from 0 to 1, it can take any value in
+that range and is a genuine continuous variable. This code plots how often every xG
+value occurs:
+import matplotlib.pyplot as plt
+import seaborn as sns
+from soccerml_figures.plotting import (
+    apply_margins,
+    create_figure,
+    output_path,
+    save_figure,
+    use_publication_style,
+)
+use_publication_style()
+# Histogram of xG values across all shots
+fig, ax = create_figure()
+sns.histplot(
+    shots["shot_statsbomb_xg"], bins=30, color="salmon", ax=ax,
+)
+ax.set_xlabel("Expected Goals (xG)")
+ax.set_ylabel("Frequency")
+ax.set_title("Distribution of Shot xG Values (WWC 2019)")
+Structured EDA by Data Types 
+| 
+45
+
+
+================================================================================
+PAGE 66
+================================================================================
+apply_margins(fig)
+save_figure(fig, output_path(3, "shot-xg-distribution"))
+Figure 3-1 shows the result of this code.
+Figure 3-1. Distribution of shot xG values (WWC 2019)
+One note on plots: To keep the figures publication-ready, we use a shared plotting
+helper from the project. It standardizes figure size, dots per inch (DPI), and text
+sizing so we do not repeat plotting boilerplate code in every example going forward.
+If you think you’re missing a few lines, refer back to the preceding code to help you.
+From here onward, we reuse this shared plotting helper. Its implementation details
+are omitted for brevity.
+This histogram reveals that the vast majority of shots have very low xG values;
+most are long-range efforts or attempts from difficult angles. The small cluster near
+0.8 corresponds to penalties, which carry a high probability of being scored. The
+distribution is heavily right-skewed, confirming that high-quality chances are rare
+and precious.
+What this means for an analyst: Understanding the distribution of xG helps set
+expectations for what constitutes a high-quality chance. This baseline is essential
+when evaluating team performance and building predictive models.
+46 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 67
+================================================================================
+Discrete variables
+Discrete numerical variables can take only specific integer values—counts of things,
+rather than continuous measurements. In soccer, these include the following:
+• Number of shots taken
+•
+• Number of passes completed
+•
+• Number of fouls committed
+•
+• Number of corners awarded
+•
+• Number of goals scored (a count, not a measurement)
+•
+Let’s look at the distribution of goals scored per team per match, and also at match
+duration. Note that match_duration is not a direct field in the StatsBomb JSON; we
+compute it from the event data by taking the maximum minute recorded per match:
+# Distribution of goals scored per team per match
+import numpy as np
+bins = list(range(0, 10))
+home_vals, _ = np.histogram(
+    matches_df["home_score"][matches_df["home_score"] <= 8].values,
+    bins=bins,
+)
+away_vals, _ = np.histogram(
+    matches_df["away_score"][matches_df["away_score"] <= 8].values,
+    bins=bins,
+)
+fig, ax = create_figure()
+ax.step(bins, list(home_vals) + [0], where="post",
+        linewidth=2.5, linestyle="-", color="black", label="Home")
+ax.step(bins, list(away_vals) + [0], where="post",
+        linewidth=2.5, linestyle="--", color="black", label="Away")
+ax.set_xlabel("Goals Scored")
+ax.set_ylabel("Frequency")
+ax.set_title(
+    "Distribution of Goals Scored per Match (WWC 2019)"
+)
+ax.legend()
+apply_margins(fig)
+save_figure(fig, output_path(3, "goals-per-match-distribution"))
+Structured EDA by Data Types 
+| 
+47
+
+
+================================================================================
+PAGE 68
+================================================================================
+Figure 3-2 shows the result of goals scored per team per match.
+Figure 3-2. Distribution of goals scored per match (WWC 2019)
+Figure 3-3 shows the distribution of match lengths.
+Figure 3-3. Distribution of match duration (WWC 2019)
+48 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 69
+================================================================================
+Most matches see one or two goals per team, confirming soccer’s reputation as a low-
+scoring sport. Match durations cluster around 90–95 minutes, with some extending
+longer because of stoppage time or extra time in knockout rounds. Visualizations
+like these give us a quick sense of what is typical—and make anomalies stand out
+immediately.
+Categorical Features: The Qualitative Aspects
+Categorical features represent qualitative data without a mathematical ordering. They
+answer what and who questions rather than how much. In soccer data, here are some
+examples:
+• Team names
+•
+• Player names
+•
+• Event types (pass, shot, foul)
+•
+• Match outcomes (win, draw, loss)
+•
+Let’s explore team participation by seeing which teams played in the tournament and
+how often:
+# Count appearances for each team
+team_counts = pd.concat(
+    [
+        matches_df["home_team_home_team_name"],
+        matches_df["away_team_away_team_name"],
+    ]
+).value_counts()
+# Create a horizontal bar plot
+fig, ax = create_figure()
+sns.barplot(
+    y=team_counts.index[:10],
+    x=team_counts.values[:10],
+    orient="h",
+    color="#72B7B2",
+    ax=ax,
+)
+ax.set_xlabel("Number of Matches")
+ax.set_ylabel("")
+ax.set_title("Top 10 Teams by Number of Matches Played")
+apply_margins(fig, left=0.2)
+save_figure(fig, output_path(3, "top-teams-by-matches"))
+Structured EDA by Data Types 
+| 
+49
+
+
+================================================================================
+PAGE 70
+================================================================================
+Figure 3-4 shows the result.
+Figure 3-4. Top 10 teams by number of matches played
+This type of visualization immediately tells us which teams progressed furthest in the
+tournament. Teams with more matches reached later stages, while those with fewer
+matches were eliminated earlier. You can reuse such code and execute it to produce
+a corresponding image when you want to gain clarity about a tournament you don’t
+know about yet.
+What this means for an analyst: This simple count reveals tournament progression
+without needing to look at detailed match results. It’s a quick way to identify the most
+successful teams and understand the tournament structure.
+50 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 71
+================================================================================
+Ordinal Features: The Ordered Categories
+Ordinal features are categorical but have a clear, meaningful order. They’re like cate‐
+gorical data with a ranking system built in. Here are some examples in soccer:
+• Competition stages (group stage < round of 16 < quarterfinals < semifinals <
+•
+final)
+• Player ratings (poor < average < good < excellent)
+•
+• Match importance levels
+•
+Let’s examine how matches are distributed across tournament stages:
+# Define the correct order of tournament stages
+stage_order = [
+    "Group Stage",
+    "Round of 16",
+    "Quarter-finals",
+    "Semi-finals",
+    "Third Place Play-off",
+    "Final",
+]
+# Convert to ordered categorical
+matches_df["competition_stage_name"] = pd.Categorical(
+    matches_df["competition_stage_name"],
+    categories=stage_order,
+    ordered=True,
+)
+# Count matches per stage
+stage_counts = (
+    matches_df["competition_stage_name"]
+    .value_counts()
+    .sort_index()
+)
+# Create the visualization
+fig, ax = create_figure()
+sns.barplot(
+    x=stage_counts.values,
+    y=stage_counts.index,
+    orient="h",
+    color="#54A24B",
+    ax=ax,
+)
+ax.set_xlabel("Number of Matches")
+ax.set_ylabel("")
+ax.set_title("Number of Matches per Tournament Stage")
+apply_margins(fig, left=0.2)
+save_figure(fig, output_path(3, "matches-by-stage"))
+Structured EDA by Data Types 
+| 
+51
+
+
+================================================================================
+PAGE 72
+================================================================================
+Figure 3-5 shows the result.
+Figure 3-5. Number of matches per tournament stage
+The StatsBomb open data uses competition_stage.name as
+the field name in the raw JSON. After calling pd.json_normal
+ize(matches, sep="_"), this becomes competition_stage_name.
+If you see a KeyError, check the exact column name with
+matches_df.columns.
+This ordered visualization follows the natural progression of the tournament. The
+group stage has the most matches (36), followed by the round of 16 (8 matches), and
+so on. This respects the tournament’s knockout structure and makes the data much
+easier to interpret.
+What this means for an analyst: Respecting the natural order in ordinal data makes
+visualizations more intuitive and helps viewers understand the underlying structure.
+This approach also ensures that any statistical analysis properly accounts for the
+ordering relationship.
+Preliminary Exploration: Getting Your Bearings
+In exploratory analysis, controlling the midfield means doing a few simple tasks con‐
+sistently well: filtering to the events you care about; grouping by soccer entities such
+as team, player, or match; and aggregating those results into compact summaries. The
+pandas library gives us the tools to do all three.
+52 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 73
+================================================================================
+The kinds of questions we will start with are deliberately simple:
+• How many events of each type do we have (passes, shots, tackles, …)?
+•
+• How does pass completion and accuracy vary by team?
+•
+• What does each team’s shot profile look like—total shots, goals scored, and
+•
+cumulative xG?
+The xG value estimates the quality of a shot by assigning a probability that it becomes
+a goal. Cumulative xG adds up these chances across a game or tournament, allowing
+us to judge chance creation independent of finishing luck. Together, summaries such
+as pass accuracy and xG act like a compass; they point us toward who controls
+possession, who creates danger, and where results might flatter or undersell a team.
+With that compass in hand, our next task is to put the dataset into a format that lets
+us ask these questions easily.
+Building Tournament DataFrames
+StatsBomb’s open dataset is organized as one JSON file per match. To work effectively
+across the entire tournament, collecting those files into two central tables is helpful:
+events_df
+Every pass, shot, tackle, or foul in the tournament
+lineups_df
+The players and their teams for each match
+Instead of juggling dozens of individual JSON files, we can now filter, group, and
+summarize from just these two DataFrames. Here is the pattern for extracting events
+from a single match:
+BASE = Path("open-data/data")
+mid = 69321  # Example match id: 2019 WWC Final
+events = json.load(open(BASE / f"events/{mid}.json"))
+events_df = pd.json_normalize(events, sep="_")
+events_df["match_id"] = mid
+The same principle applies to lineups. Looping through all match IDs repeats
+this pattern until you have stacked the full tournament together. Once prepared,
+events_df and lineups_df will act as your analytical midfield for the rest of this
+chapter.
+Preliminary Exploration: Getting Your Bearings 
+| 
+53
+
+
+================================================================================
+PAGE 74
+================================================================================
+If you are running this code in Google Colab, you can use a tool
+such as Gemini to automate the loop across all match IDs. Alterna‐
+tively, you can generate the boilerplate code once with any chatbot
+and then reuse it. The key point is that this preparation is done
+only once; after that, you can work directly with the consolidated
+DataFrames.
+Counting the Frequency of Event Types
+Once the event table is ready, the first step is simply to see the kinds of actions
+it contains. Each row in events_df has a type_name, such as pass, shot, or duel.
+Counting the frequency of these event types gives us an immediate sense of the
+dataset’s shape:
+events_df["type_name"].value_counts().head(10)
+The output shows passes dominating, followed by ball receipts, duels, and goalkeeper
+actions further down the list. This distribution is exactly what you would expect in
+a typical soccer tournament: passes occur constantly, while shots and goals are much
+rarer but more decisive events.
+This simple frequency count serves as a sanity check. If we saw an unusual pattern—
+say, more shots than passes—it would signal a data quality issue that needs investiga‐
+tion before proceeding with analysis.
+Filtering: Passes by Player or Team
+The simplest aggregation is filtering. Instead of looking at all events, we focus on a
+specific subset. For example, we can see all passes by the United States Women’s team:
+us_passes = events_df.query("type_name == 'Pass'").query(
+    'team_name == "United States Women\'s"'
+)
+print(
+    f"US Women made {len(us_passes)} "
+    "passes in the tournament"
+)
+This basic filtering is like asking, “Show me only the events I care about.” It’s the
+foundation for more complex analysis.
+Grouping: Per-Match Pass Summaries
+More interesting is to group events and calculate summaries. For example, we can
+calculate passing statistics for each team in each match:
+passes = events_df.query("type_name == 'Pass'").copy()
+passes["completed"] = passes["pass_outcome_name"].isna()
+per_match_pass = (
+54 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 75
+================================================================================
+    passes.groupby(["match_id", "team_name"])
+    .agg(
+        attempted=("type_name", "count"),
+        completed=("completed", "sum"),
+    )
+    .reset_index()
+)
+per_match_pass["pass_accuracy"] = (
+    per_match_pass["completed"] / per_match_pass["attempted"]
+)
+This creates a summary table (Table 3-1) where each match is displayed alongside its
+passing statistics.
+Table 3-1. Pass accuracy per match and team
+match_id
+team_name
+attempted
+completed
+pass_accuracy
+22921
+France Women’s
+641
+562
+0.876755
+22921
+Korea Republic Women’s 328
+249
+0.759146
+22924
+Nigeria Women’s
+332
+209
+0.629518
+22924
+Norway Women’s
+470
+363
+0.772340
+22926
+China PR Women’s
+344
+224
+0.651163
+This table shows that France attempted 641 passes against Korea in match 22921.
+That number may seem high at first glance, but it is realistic in the context of interna‐
+tional tournament play. It also tells a tactical story: France dominated possession in
+that game, circulating the ball patiently to control tempo. By contrast, a team with far
+fewer passes may have relied on direct play, quick transitions, or defending deep.
+Per-match summaries like these are the bridge between raw event logs and higher-
+level analysis. They allow us to compare styles across games, track consistency, and
+ultimately engineer features that can feed into predictive models later in the book.
+Aggregating: Shots, Goals, and xG by Team
+Passing tells us who controls the ball, but goals decide matches. A natural next step in
+EDA is to roll up shots and goals to the team level—and, if available, include xG to
+measure the quality of those chances. This code shows you how:
+shots = events_df.query("type_name == 'Shot'").copy()
+shots["is_goal"] = shots["shot_outcome_name"].eq("Goal")
+# If StatsBomb xG is present, include it
+xg_col = (
+    "shot_statsbomb_xg"
+    if "shot_statsbomb_xg" in shots.columns
+    else None
+)
+per_match_shot = shots.groupby(["match_id", "team_name"]).agg(
+Preliminary Exploration: Getting Your Bearings 
+| 
+55
+
+
+================================================================================
+PAGE 76
+================================================================================
+    shots=("type_name", "count"),
+    goals=("is_goal", "sum"),
+    **({"xg": (xg_col, "sum")} if xg_col else {})
+)
+This produces a table of match-level summaries: how many shots each team took,
+how many became goals, and how many goals the quality of those shots would
+predict on average.
+Rolling up one level higher, we can build tidy tournament summaries:
+agg_ops = {"shots": "sum", "goals": "sum"}
+if "xg" in per_match_shot.columns:
+    agg_ops["xg"] = "sum"
+team_summary = per_match_shot.groupby("team_name").agg(agg_ops)
+if "xg" in team_summary.columns:
+    team_summary["xg_per_shot"] = team_summary[
+        "xg"
+    ] / team_summary["shots"].clip(lower=1)
+The resulting Table 3-2 shows total shots, total goals, cumulative xG, and average xG
+per shot (a measure of shot quality). From the first entries, displayed here, we can see
+that while China’s team had a fair number of shots, it converted very few into goals.
+On the other hand, Australia and Brazil didn’t have many more shots than China but
+converted many more.
+Table 3-2. Shots and goals per team
+team_name
+shots
+goals
+xg
+xg_per_shot
+Argentina Women’s
+18
+2
+1.754022
+0.097446
+Australia Women’s
+57
+9
+9.541980
+0.167403
+Brazil Women’s
+51
+7
+6.629535
+0.129991
+Cameroon Women’s 43
+3
+3.852797
+0.089600
+Canada Women’s
+61
+4
+6.528409
+0.107023
+Chile Women’s
+34
+1
+2.857332
+0.084039
+China PR Women’s
+40
+1
+2.482836
+0.062071
+England Women’s
+89
+13
+12.912852 0.145088
+France Women’s
+91
+10
+8.466149
+0.093035
+Germany Women’s
+77
+10
+10.020947 0.130142
+From here, we can already start telling tactical stories:
+• Teams with high shot volume but low xG per shot may be settling for long-range
+•
+efforts, taking too many pointless shots from long distances.
+• Teams that score fewer goals than their cumulative xG might simply be unlucky
+•
+or lacking clinical finishers.
+56 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 77
+================================================================================
+• Teams outperforming xG often rely on hot streaks or exceptional individual skill,
+•
+patterns that are difficult to sustain over time.
+This contrast between goals and expected goals is one of the most powerful lenses
+in modern soccer analytics. Goals tell us what happened. xG suggests what should
+have happened given the chances created. Combining the two allows us to separate
+signal from noise, and it prepares the ground for visualizations such as cumulative xG
+timelines and scatterplots that we will explore in the next section.
+Basic Data Cleaning for Soccer
+Real-world data is rarely perfect. It’s like a pitch after a rainy match—a bit messy.
+Before we can do any serious analysis, we need to do some basic cleaning. More
+advanced cleaning and feature engineering techniques are covered in Chapter 8.
+Analysts must prepare their datasets before analysis. This work is not glamorous, but
+it is vital. Raw event logs contain quirks and inconsistencies that, if left untreated, can
+lead to inaccurate summaries and even cause later models to fail.
+Handling Missing Values
+Real soccer data is rarely spotless. Passes may be logged without outcomes, coordi‐
+nates may be missing, or player IDs may be absent for substitutions. If we do not
+carefully handle these gaps, later summaries and models can become skewed or
+unstable.
+The following line produces a quick summary of where in our events_df dataset data
+gaps might be hiding:
+events_df.isnull().sum()
+This command produces a list of the number of missing values of each table column.
+Fields such as pass_outcome_name or location often appear with gaps. (Spoiler alert:
+StatsBomb data is, in fact, very clean. This will likely not be the case, however, for
+other data that you might deal with later in your analyst career!)
+What should we do with missing or messy values? The answer depends on context:
+• Drop values when they are rare and nonessential.
+•
+• Impute (fill in) when the missing value has a natural default.
+•
+• Interpret carefully when the missing value itself carries information.
+•
+For example, in StatsBomb data, a pass is marked as completed by leaving pass_out
+come_name blank. In this case, the missing value is actually meaningful:
+Basic Data Cleaning for Soccer 
+| 
+57
+
+
+================================================================================
+PAGE 78
+================================================================================
+# Treat NaN in pass_outcome_name as "completed"
+passes = events_df.query("type_name == 'Pass'").copy()
+passes["completed"] = passes["pass_outcome_name"].isna()
+Here, the not a number (NaN) is not a problem but the solution; it signals success
+that the pass was completed. In other contexts, you might replace missing numbers
+with the column mean or drop rows entirely if too many values are absent.
+Handling missing data has no one-size-fits-all rule. In soccer data,
+a blank cell might mean a logging error, or it might encode a delib‐
+erate design choice (such as StatsBomb’s convention for comple‐
+ted passes). Always check what the data provider intended before
+deciding how to clean.
+The key lesson is that data cleaning is not about making the data look neat. Rather,
+it’s about making sure your analysis reflects what happened on the pitch. A careless
+assumption here can cascade through the rest of the workflow, undermining both
+exploratory insights and predictive models later.
+Standardizing Names
+Another source of potential trouble is inconsistent naming. A team might appear as
+USA, United States, or United States Women’s. Players may have full names in one
+match and nicknames in another. Without standardization, groupby() operations
+can double-count, and leaderboards can become misleading.
+A simple way to handle this is with a mapping dictionary:
+# Example: standardize team names
+name_map = {
+    "USA": "United States Women's",
+    "United States": "United States Women's",
+    "Brasil": "Brazil Women's",
+}
+matches_df["home_team_home_team_name"] = matches_df[
+    "home_team_home_team_name"
+].replace(name_map)
+matches_df["away_team_away_team_name"] = matches_df[
+    "away_team_away_team_name"
+].replace(name_map)
+For players, the same principle applies. You might decide that Marta Vieira da Silva
+should always be shortened to Marta, or you may prefer to keep the full name
+consistently. Either choice is fine, as long as it is applied uniformly.
+As noted previously, StatsBomb’s open data is usually very clean, so you may not
+need to do much of this. Still, it is good practice to be aware of the issue and to keep
+58 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 79
+================================================================================
+a record of any mappings you apply. Consistency matters more than the particular
+convention you choose.
+Visualizing Soccer Data
+Numbers in a table can tell us a lot, but patterns often emerge much more clearly
+when we draw them. Visualization is a central step in exploratory data analysis
+because it connects raw numbers back to the flow of the game. Coaches sketch tactics
+on a whiteboard; analysts do the same with charts and figures.
+In this section, we will build a small visualization toolkit, moving from basic bar
+charts to more advanced soccer-specific graphics such as cumulative timelines and
+heatmaps. Each plot type has strengths and weaknesses. The goal is not to master
+every option but to learn how to pick the right one for the question at hand.
+A Quick Note on Matplotlib and Seaborn
+All the figures in this chapter use Matplotlib and Seaborn. Matplotlib is the core
+Python library for plotting; it provides the low-level building blocks for charts.
+Seaborn sits on top of Matplotlib, offering higher-level functions and prettier defaults.
+Most analysts use them together: Seaborn for quick plots, Matplotlib for fine-tuning.
+To use them, just make sure to place the following lines in the beginning of your
+notebook:
+import matplotlib.pyplot as plt
+import seaborn as sns
+from soccerml_figures.plotting import (
+    apply_margins,
+    create_figure,
+    output_path,
+    save_figure,
+)
+Then, Seaborn can draw a histogram in one line:
+sns.histplot(data=shots, x="shot_statsbomb_xg")
+Under the hood, this is just a convenient wrapper around Matplotlib. If you need to
+adjust details such as colors, labels, or axes, you can always fall back on Matplotlib.
+Then you’d add below that one line something like this:
+plt.xlabel("Shot xG")
+plt.ylabel("Count")
+plt.title("Distribution of shot quality (xG)")
+Together, these two libraries give you both speed and flexibility: Seaborn for the quick
+sketch, Matplotlib for the finishing touches.
+Visualizing Soccer Data 
+| 
+59
+
+
+================================================================================
+PAGE 80
+================================================================================
+Bar Charts and Rankings
+Bar charts are the simplest way to compare teams or players. They are especially
+useful for rankings: top scorers, most passes, or best passing accuracy. Seaborn and
+pandas make this straightforward.
+We already saw a table of pass accuracy by team. Turning it into a bar chart makes the
+comparison much easier to grasp. Let’s create a visualization of the top teams by pass
+accuracy:
+# Calculate pass accuracy by team
+team_pass_accuracy = (
+    per_match_pass.groupby("team_name")["pass_accuracy"]
+    .mean()
+    .sort_values(ascending=False)
+    .head(8)
+)
+fig, ax = create_figure()
+sns.barplot(
+    x=team_pass_accuracy.values,
+    y=team_pass_accuracy.index,
+    orient="h",
+    color="#4C78A8",
+    ax=ax,
+)
+ax.set_xlabel("Pass Accuracy")
+ax.set_ylabel("")
+ax.set_title("Top 8 Teams by Pass Accuracy (WWC 2019)")
+apply_margins(fig, left=0.2)
+save_figure(fig, output_path(3, "pass-accuracy"))
+Figure 3-6 shows the output.
+Figure 3-6. Top eight teams by pass accuracy (WWC 2019)
+60 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+

@@ -1,0 +1,3342 @@
+
+================================================================================
+PAGE 81
+================================================================================
+Bar charts like this let us compare teams at a glance. Japan led the women’s tourna‐
+ment in pass accuracy, edging out England and Australia. High accuracy suggests a
+possession-oriented style, while lower values often reflect teams that take more risks
+with long balls or fast transitions.
+What this means for an analyst: Pass accuracy is a fundamental indicator of a team’s
+playing style. Teams with consistently high pass accuracy typically favor possession-
+based approaches, building attacks patiently through short, safe passes. Lower accu‐
+racy might indicate more direct play, where teams are willing to attempt riskier passes
+to create quick scoring opportunities.
+Histograms and Distributions
+Bar charts compare teams or players, but sometimes we want to see the overall
+distribution of a statistic: are most values clustered in one range, or are they spread
+out? Histograms answer this by showing how often different values occur.
+Take pass length as an example. Some teams build patiently with short passes; others
+rely on longer balls to move the game forward quickly. We can plot a histogram of
+pass lengths over the whole tournament, aggregated over all teams. This works as
+follows, using the table passes we created in “Grouping: Per-Match Pass Summaries”
+on page 54:
+fig, ax = create_figure()
+sns.histplot(
+    data=passes,
+    x="pass_length",
+    bins=30,
+    color="skyblue",
+    ax=ax,
+)
+ax.set_xlabel("Pass length (meters)")
+ax.set_ylabel("Count")
+ax.set_title("Distribution of pass lengths")
+apply_margins(fig)
+save_figure(fig, output_path(3, "pass-length-histogram"))
+Figure 3-7 shows the result.
+Visualizing Soccer Data 
+| 
+61
+
+
+================================================================================
+PAGE 82
+================================================================================
+Figure 3-7. Distribution of pass lengths (WWC 2019)
+The sharp peak under 20 meters reflects short, safe passes typical of possession play.
+The high bars indicate that, in the 2019 WWC, many short and safe passes were
+played. The long tail stretching toward 40 meters and beyond suggests teams mixing
+in more direct balls—but this is a rarer occurrence.
+What this means for an analyst: This distribution reveals the tactical preferences
+across the tournament. The dominance of short passes (under 20 meters) indicates
+that most teams favored patient buildup play over direct, long-ball tactics. The long
+tail shows that while long passes are less common, they’re still an important part of
+the game, often used to switch play or launch counterattacks.
+We can apply the same idea to shot quality. Instead of raw distance, StatsBomb data
+provides xG, a probability that each shot will result in a goal. Plotting these values
+reveals how often teams create high- versus low-quality chances:
+fig, ax = create_figure()
+sns.histplot(
+    data=shots,
+    x="shot_statsbomb_xg",
+    bins=25,
+    color="salmon",
+    ax=ax,
+)
+ax.set_xlabel("Shot xG")
+ax.set_ylabel("Count")
+ax.set_title("Distribution of shot quality (xG)")
+apply_margins(fig)
+save_figure(fig, output_path(3, "shot-quality"))
+Figure 3-8 shows the result.
+62 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 83
+================================================================================
+Figure 3-8. Distribution of shot quality (xG, WWC 2019)
+This histogram skews heavily toward low xG values, with most shots carrying less
+than a 10% chance of scoring. That is normal: long-range efforts and tight angles are
+more common than clean looks inside the box. The rare right-tail values represent
+high-quality chances—often the difference-makers in tight matches. The small peak
+around an xG of 0.8 corresponds to penalties, which have a high probability of being
+scored.
+What this means for an analyst: This distribution confirms that high-quality scoring
+chances are rare and precious in soccer. The vast majority of shots have low xG
+values, emphasizing the importance of shot selection and chance creation. Teams that
+can consistently create shots with higher xG values will typically be more successful
+than those taking many low-quality attempts.
+Boxplots and Variability
+Totals and averages are useful, but they can hide important variation. Some teams
+are consistent from match to match, while others swing between brilliant and poor
+performances. Boxplots are a good way to visualize this variability.
+As an example, let’s look at passing accuracy across matches. Instead of showing a
+single average per team, we can plot the distribution of pass accuracy values across all
+matches:
+team_order = (
+    per_match_pass.groupby("team_name")["pass_accuracy"]
+    .mean()
+    .sort_values()
+    .index
+)
+fig, ax = create_figure()
+Visualizing Soccer Data 
+| 
+63
+
+
+================================================================================
+PAGE 84
+================================================================================
+sns.boxplot(
+    data=per_match_pass.reset_index(),
+    x="pass_accuracy",
+    y="team_name",
+    orient="h",
+    order=team_order,
+    color="#72B7B2",
+    ax=ax,
+)
+ax.set_xlabel("Pass accuracy")
+ax.set_ylabel("Team")
+ax.set_title("Per-match pass accuracy distribution")
+apply_margins(fig, left=0.2)
+save_figure(fig, output_path(3, "pass-boxplot"))
+Figure 3-9 shows the result.
+Figure 3-9. Per-match pass accuracy by team (WWC 2019)
+This boxplot reveals several patterns:
+• Teams with narrow boxes (small interquartile range) were very consistent in their
+•
+passing accuracy every game (e.g., England, Australia, and Spain).
+• Teams with wide boxes (high variability) alternated between strong passing per‐
+•
+formances and weaker ones (e.g., France and US).
+• Outliers highlight exceptional matches—either unusually crisp passing or games
+•
+where possession broke down.
+What this means for an analyst: Boxplots like these help us identify not just how
+good a team is on average, but its stability across a tournament. In knockout competi‐
+tions, consistency is often just as valuable as peak performance. Teams with narrow
+64 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 85
+================================================================================
+boxes are more predictable and reliable, while those with wide boxes might be more
+dangerous but also more vulnerable to off-days.
+Time Series and Cumulative Plots
+Totals tell us how much happened, but not when. A within-match timeline shows
+momentum: who created chances early, who dominated later, and whether goals
+reflected the balance of play. A simple and informative visualization is the cumulative
+shots timeline.
+The following code builds such a timeline for a single match (replace match_id with
+any game you want to explore):
+mid = 22921  # Example match id
+# Select shots from this match and compute exact minute
+shots_m = events_df.query(
+    "type_name == 'Shot' and match_id == @mid"
+).copy()
+shots_m["minute_exact"] = (
+    shots_m["minute"].fillna(0)
+    + shots_m["second"].fillna(0) / 60.0
+)
+# Sort and create cumulative shot count
+shots_m = shots_m.sort_values("minute_exact")
+shots_m["cum_shots"] = (
+    shots_m.groupby("team_name").cumcount() + 1
+)
+# Plot timeline
+fig, ax = create_figure()
+for team in shots_m["team_name"].unique():
+    team_shots = shots_m[shots_m["team_name"] == team]
+    ax.step(
+        team_shots["minute_exact"],
+        team_shots["cum_shots"],
+        where="post",
+        label=team,
+        linewidth=2,
+    )
+ax.set_xlabel("Match minute")
+ax.set_ylabel("Cumulative shots")
+ax.set_title("Cumulative shots timeline")
+ax.legend()
+ax.grid(True, alpha=0.3)
+apply_margins(fig)
+save_figure(fig, output_path(3, "cumulative-shots-timeline"))
+Figure 3-10 shows the output.
+Visualizing Soccer Data 
+| 
+65
+
+
+================================================================================
+PAGE 86
+================================================================================
+Figure 3-10. Cumulative shots timeline for a single match
+This timeline shows how attacking pressure built up over 90 minutes. Here’s how we’d
+interpret the timeline:
+• France’s line rises steadily but never steeply, reflecting gradual buildup and
+•
+patient chance creation.
+• Korea Republic’s line stays flatter, showing fewer attempts overall.
+•
+• The absence of sharp bursts indicates that France rarely unleashed waves of
+•
+shots, instead probing with consistent but moderate pressure.
+What this means for an analyst: Timelines like this highlight when momentum was
+with each side, not just the final shot count. They give coaches and analysts a sense of
+whether a team’s style was sustained throughout the match or concentrated in short
+bursts. Sharp increases indicate periods of intense pressure, while flat sections suggest
+defensive phases or loss of attacking rhythm.
+Scatterplots: Shot Volume Versus Goals
+Sometimes we want to see the relationship between two variables. Scatterplots are
+perfect for this. Let’s examine the relationship between shot volume and goals scored:
+# Calculate per-match averages for teams
+team_averages = (
+    per_match_shot.groupby("team_name")
+    .agg(
+        shots_per_match=("shots", "mean"),
+        goals_per_match=("goals", "mean"),
+    )
+    .reset_index()
+)
+66 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 87
+================================================================================
+trend_x = team_averages["shots_per_match"]
+trend_y = team_averages["goals_per_match"]
+slope, intercept = np.polyfit(trend_x, trend_y, 1)
+x_line = np.linspace(trend_x.min(), trend_x.max(), 100)
+fig, ax = create_figure()
+sns.scatterplot(
+    data=team_averages,
+    x="shots_per_match",
+    y="goals_per_match",
+    s=90,
+    ax=ax,
+)
+ax.plot(
+    x_line,
+    slope * x_line + intercept,
+    color="blue",
+    linestyle="--",
+    alpha=0.8,
+)
+ax.set_xlabel("Shots per Match")
+ax.set_ylabel("Goals per Match")
+ax.set_title("Teams: Shot Volume vs. Goals (WWC 2019)")
+apply_margins(fig)
+save_figure(fig, output_path(3, "shots-vs-goals-team"))
+Figure 3-11 shows the output.
+Figure 3-11. Team averages: shots versus goals
+Visualizing Soccer Data 
+| 
+67
+
+
+================================================================================
+PAGE 88
+================================================================================
+The scatter shows a clear positive relationship: teams that generate more shots tend to
+score more goals. This is not surprising, but it is a useful reminder that volume mat‐
+ters. The dashed line is a trend line (a simple linear regression), showing the average
+relationship. At the same time, quality also plays a role. Some teams converted fewer
+goals from many attempts, while others relied on fewer, higher-quality chances. This
+balance between quantity and quality is one of the central questions in modern soccer
+analytics.
+What this means for an analyst: The positive correlation confirms that shot volume
+is important, but the scatter around the trend line shows that conversion efficiency
+varies significantly among teams. Teams above the line are more clinical finishers,
+while those below might need to improve their shot selection or finishing quality. The
+trend line helps identify over- and under-performers relative to their shot volume.
+Soccer-Specific Visualizations with mplsoccer
+While standard plots are useful, nothing beats seeing the data on a proper soccer
+pitch. The mplsoccer library is a fantastic tool that lets us do just that. It helps
+us translate coordinates from our data into tactical pictures that are immediately
+understandable to coaches, players, and fans.
+Think of mplsoccer as your tactical whiteboard. Just as coaches draw formations and
+player movements on a board, we can plot actual match data directly onto a pitch
+representation. This bridges the gap between abstract numbers and the spatial reality
+of soccer.
+Pass Location Heatmaps
+We now know how far (and how well) teams shoot. But where on the pitch do they
+build play? A heatmap of pass start locations shows whether a team prefers wide
+overloads, central progression, or deep recycling near its own box.
+StatsBomb events store coordinates either as a nested list column (location) or as
+flattened columns (for example, after pd.json_normalize). The following extracts
+pass start coordinates into a reusable passes_xy table:
+def build_passes_xy(events_df):
+    p = events_df.query("type_name == 'Pass'").copy()
+    # Handle both nested and flattened coordinate schemas
+    if "location" in p.columns:
+        p[["x", "y"]] = p["location"].apply(pd.Series)
+    else:
+        # Common flattened variants from json_normalize
+        for a, b in (
+            ("location_0", "location_1"),
+            ("location.x", "location.y"),
+            ("location_x", "location_y"),
+68 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 89
+================================================================================
+        ):
+            if a in p.columns and b in p.columns:
+                p["x"] = p[a]
+                p["y"] = p[b]
+                break
+    # Light cleanup: drop missing coords and throw-ins
+    p = p.dropna(subset=["x", "y"])
+    if "pass_type_name" in p.columns:
+        p = p[p["pass_type_name"] != "Throw-in"]
+    return p
+passes_xy = build_passes_xy(events_df)
+With passes_xy ready, we can plot a simple hexbin heatmap for one team. Here, we
+look at Japan’s team:
+team = "Japan Women's"
+team_passes = passes_xy.query("team_name == @team").dropna(
+    subset=["x", "y"]
+)
+fig, ax = create_figure()
+hexmap = ax.hexbin(
+    team_passes["x"],
+    team_passes["y"],
+    gridsize=25,
+    mincnt=1,
+    cmap="Blues",
+)
+ax.set_xlim(0, 120)
+ax.set_ylim(0, 80)
+ax.invert_yaxis()  # Match StatsBomb axes
+ax.set_aspect("equal", adjustable="box")
+ax.set_xlabel("Pitch X")
+ax.set_ylabel("Pitch Y")
+ax.set_title(f"Pass Start Locations — {team} (WWC 2019)")
+colorbar = fig.colorbar(hexmap, ax=ax, pad=0.02)
+colorbar.set_label("Pass count")
+apply_margins(fig, right=0.9)
+save_figure(fig, output_path(3, "pass-heatmap"))
+Figure 3-12 shows the output.
+Soccer-Specific Visualizations with mplsoccer 
+| 
+69
+
+
+================================================================================
+PAGE 90
+================================================================================
+Figure 3-12. Pass start location heatmap
+The horizontal axis (0–120) represents the full length of the pitch in meters, while
+the vertical axis (0–80) represents its width. Each hexagon counts the number of pass
+start locations within that area. Darker cells indicate zones with more passing activity
+(closer to 14 shots in this match, as per the legend to the right of the figure).
+In this example, Japan Women’s spread its buildup evenly across the width of the
+field, with a noticeable concentration in the central third. The two dark clusters
+near the team’s own penalty area correspond to short passes beginning from the
+goalkeeper and center-backs. Together, these patterns reveal a possession-oriented
+style built on midfield control and short passes from the back rather than direct long
+balls.
+What this means for an analyst: Heatmaps reveal a team’s spatial preferences and
+tactical approach. Japan’s distribution shows it’s comfortable building play from deep
+positions and using the full width of the pitch. The concentration in central areas
+suggests that this team prefers to control the game through the midfield rather
+than relying heavily on wing play. This visualization confirms Japan’s reputation for
+patient, possession-based soccer.
+Advanced Pitch Visualizations: Passing Networks
+One of the most insightful soccer-specific visualizations is the passing network. This
+shows not just where passes start, but also the connections between players. It reveals
+the tactical structure and key relationships within a team.
+70 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 91
+================================================================================
+Setting up such a passing network requires more complex code. The reason is that
+we need to calculate average positions and pass frequencies between players before
+attempting a visualization. The original source code for this example can be found in
+the book’s GitHub repository. Figure 3-13 shows the result.
+Figure 3-13. The passing network by Australia Women’s in match 68357
+This passing network depicts Australia Women’s in a specific match. Each player is
+positioned at their average location on the pitch, and lines between players represent
+the frequency and volume of passes between them. Thicker lines indicate more
+frequent passing combinations.
+What this means for an analyst: Passing networks reveal the tactical structure of a
+team. Central players with many connections (like Ellie Carpenter in this example)
+are the key distributors. The positioning shows the formation and players’ move‐
+ments during the match. Isolated players or weak connections might indicate tactical
+issues or players who struggled to get involved in the game.
+Basic Pitch Visualizations
+Let’s now create the basic pitch visualizations we introduced earlier, but with more
+context:
+from mplsoccer import Pitch, VerticalPitch
+# Create a horizontal pitch (typical view)
+pitch = Pitch(
+    pitch_color="grass", line_color="white", stripe=True,
+)
+fig, ax = create_figure()
+pitch.draw(ax=ax)
+Soccer-Specific Visualizations with mplsoccer 
+| 
+71
+
+
+================================================================================
+PAGE 92
+================================================================================
+# Sample shot data from the attacking third
+import numpy as np
+rng = np.random.default_rng(42)
+x = rng.uniform(80, 120, 15)  # Shots from attacking third
+y = rng.uniform(10, 70, 15)  # Across the width
+goals = rng.choice(
+    [True, False], 15, p=[0.3, 0.7],
+)  # 30% conversion rate
+# Plot goals and misses with different colors
+pitch.scatter(
+    x[goals],
+    y[goals],
+    marker="o",
+    color="#FFD700",
+    edgecolors="black",
+    linewidths=0.8,
+    s=100,
+    ax=ax,
+    label="Goal",
+    zorder=5,
+)
+pitch.scatter(
+    x[~goals],
+    y[~goals],
+    marker="s",
+    color="#1a1a2e",
+    edgecolors="black",
+    linewidths=0.8,
+    s=100,
+    ax=ax,
+    label="Miss",
+    zorder=5,
+)
+ax.legend()
+ax.set_title("Shot Map: Goals vs Misses")
+apply_margins(fig, left=0.02, right=0.99, top=0.88, bottom=0.04)
+save_figure(fig, output_path(3, "shot-map"))
+Figure 3-14 shows the result: a shot map generated with random data. Each circle
+marks the location of a shot: circles are goals, and squares are misses. The pitch runs
+from left to right, so all shots here were taken toward the righthand goal. In this
+fictional example, the team recorded 14 shots, converting 4 of them into goals—a
+realistic ratio for a competitive match.
+This type of visualization makes it easy to spot shooting tendencies at a glance.
+Clusters of circles close to the goal indicate efficient finishing from central areas,
+while squares farther out reveal lower-probability attempts from a distance.
+72 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 93
+================================================================================
+Figure 3-14. A shot map of goals versus misses
+What this means for an analyst: A shot map instantly reveals a team’s shooting
+habits. Are players taking a lot of low-probability shots from far out? Or are they
+creating high-quality chances close to goal? This visualization can be used to evaluate
+offensive efficiency and tactical discipline. Teams that consistently create shots from
+central areas close to the goal are typically more effective than those taking specula‐
+tive long shots from the outer areas of the soccer pitch.
+Advanced Heatmap Visualizations
+Beyond basic shot maps, we can create more sophisticated heatmaps that show player
+movement patterns or event density across the pitch. Here is how we create a more
+advanced heatmap with mplsoccer:
+pitch = Pitch(
+    pitch_color="#22312b", line_color="#efefef", linewidth=2,
+)
+fig, ax = create_figure()
+fig.patch.set_facecolor("#22312b")
+ax.set_facecolor("#22312b")
+pitch.draw(ax=ax)
+# Example heatmap of player positions or events
+# Real analysis would use event coordinates
+Soccer-Specific Visualizations with mplsoccer 
+| 
+73
+
+
+================================================================================
+PAGE 94
+================================================================================
+rng = np.random.default_rng(42)
+x = rng.normal(60, 20, 1000)  # Centered around midfield
+y = rng.normal(40, 15, 1000)  # Centered vertically
+x = np.clip(x, 0, 120)  # Keep within pitch bounds
+y = np.clip(y, 0, 80)
+# Create the heatmap
+pitch.kdeplot(
+    x, y, ax=ax, fill=True, levels=10, alpha=0.7, cmap="Blues",
+)
+ax.set_title("Player Movement Heatmap", color="white")
+apply_margins(fig, left=0.02, right=0.99, top=0.88, bottom=0.04)
+save_figure(fig, output_path(3, "player-heatmap"))
+In this example, we’re not plotting a real match, but generating random coordinates
+to show how the visualization works. Figure 3-15 shows the result.
+Figure 3-15. An advanced heatmap of player movement density
+The horizontal axis (0–120) represents the pitch length, and the vertical axis (0–80)
+its width. Darker zones mark areas with higher simulated player activity, while lighter
+zones indicate sparse movement. In this scenario, most of the action occurs near
+the outer edges of the pitch, suggesting wide positioning, while the small circles of
+density around the midfield represent central players rotating through buildup play.
+What this means for an analyst: Advanced heatmaps reveal spatial patterns that aren’t
+immediately obvious from raw coordinate data. They can show where a player spends
+most of their time, where a team creates the most chances, or where defensive actions
+are concentrated. The smooth gradients help identify hotspots and cold zones, mak‐
+ing it easier to understand tactical patterns and player roles.
+74 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 95
+================================================================================
+Case Study: Japan Women’s at the 2019 World Cup
+We have built up a toolkit of summaries and visualizations, but so far we have looked
+at each in isolation. To see how these pieces come together, let’s apply them to a
+concrete example.
+Our guiding question is, how did the Japan Women’s team play at the 2019 FIFA
+Women’s World Cup?
+Japan provides an ideal case study. Its players are known for a possession-oriented
+style, with patient buildup and precise passing, yet they faced opponents with very
+different approaches. By combining the tools we just developed—tables, charts, time‐
+lines, and heatmaps—we can sketch a full analytical profile of their tournament.
+In this section, we will move from tournament-wide numbers to match-level flow,
+spatial patterns, and individual player contributions. The goal is not only to learn
+about Japan but to practice the workflow of exploratory analysis: cleaning data,
+building tidy summaries, visualizing patterns, and interpreting them in soccer terms.
+Team-Level Overview
+We begin at the tournament level. How did Japan’s overall profile of shooting and
+finishing compare to other top teams?
+From our earlier summaries, we already have shots, goals, and xG rolled up to the
+team level. Let’s extract Japan and three other strong teams (the US, England, and the
+Netherlands) for context:
+# Tournament-level summary of key stats
+team_compare = team_summary[["shots", "goals", "xg"]].copy()
+# Pick Japan plus three other teams to compare
+teams = [
+    "Japan Women's",
+    "United States Women's",
+    "England Women's",
+    "Netherlands Women's",
+]
+subset = team_compare.loc[teams].reset_index()
+# Plot as grouped bar chart
+metrics = ["shots", "goals", "xg"]
+subset_melt = subset.melt(
+    id_vars="team_name",
+    value_vars=metrics,
+    var_name="metric",
+    value_name="value",
+)
+fig, ax = create_figure()
+sns.barplot(
+    data=subset_melt,
+    x="metric",
+Case Study: Japan Women’s at the 2019 World Cup 
+| 
+75
+
+
+================================================================================
+PAGE 96
+================================================================================
+    y="value",
+    hue="team_name",
+    ax=ax,
+)
+ax.set_xlabel("")
+ax.set_ylabel("Value")
+ax.set_title("Team-Level Comparison (WWC 2019)")
+ax.legend(title="")
+apply_margins(fig, bottom=0.22)
+save_figure(fig, output_path(3, "team-overview"))
+Figure 3-16 shows the output (note that some improvements were made to optimize
+for book-friendly display, but the previous code will get you started).
+Figure 3-16. Team-level comparison (Japan versus selected teams, WWC 2019)
+What does this tell us?
+• Japan attempted fewer shots and scored fewer goals than the other teams. (This
+•
+is somewhat natural in the context of the tournament, as the other teams made it
+into the semifinals and Japan did not.)
+• The US team dominated both shot volume and goals, reflecting its direct, high-
+•
+tempo style.
+• England and the Netherlands combined decent shooting volume with higher
+•
+finishing output.
+76 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 97
+================================================================================
+Japan’s pass accuracy, while not shown here, was among the best in the tournament.
+This confirms this team’s possession-oriented approach: players controlled the ball
+well but did not always translate that control into large numbers of dangerous
+chances.
+What this means for an analyst: Japan’s profile shows a team that prioritizes ball reten‐
+tion and patient buildup over aggressive shot-seeking. While these players created
+fewer chances than other top teams, their possession-based approach allowed them to
+control games. This style can be very effective, especially against teams that struggle
+to break down organized defenses.
+Match Flow
+Tournament totals give us a broad view, but soccer is played one match at a time. To
+understand how Japan’s style unfolded in practice, we can look at the flow of a single
+game. The cumulative shots timeline shown previously in Figure 3-10 for the match
+between Korea and France shows how attacking pressure built up over 90 minutes.
+Let’s examine Japan’s second group stage match against Scotland (StatsBomb match
+ID 22961), played on June 14, 2019. Japan entered the match needing a result after
+a 0–0 draw with Argentina, while Scotland was looking to bounce back from a 2–1
+defeat to England. The match ended in a 2–1 victory for Japan, with goals from Mana
+Iwabuchi and Yuika Sugasawa in the first half, before Lana Clelland pulled one back
+for Scotland late in the game. Figure 3-17 shows this shots timeline.
+Figure 3-17. Cumulative shots timeline for Japan versus Scotland, WWC 2019
+Case Study: Japan Women’s at the 2019 World Cup 
+| 
+77
+
+
+================================================================================
+PAGE 98
+================================================================================
+Here’s how we’d interpret the timeline for Japan’s match against Scotland:
+• Japan’s line rises steadily in the first half, reflecting the team’s early dominance
+•
+and patient chance creation. The players converted this pressure into a 2–0 lead
+by the 36th minute, marked by the star symbols on the plot.
+• Scotland’s line stays remarkably flat for the first 45 minutes, showing very few
+•
+attempts as Japan controlled possession.
+• The momentum shifts visibly in the second half. Japan’s shot accumulation slows
+•
+down as the team protects its lead, while Scotland pushes hard from around
+minute 50 onward, culminating in Clelland’s 87th-minute goal.
+Timelines like this highlight each side’s momentum, not just the final shot count. By
+adding goal markers to the plot, we can immediately see how scoring events relate
+to periods of sustained pressure. They give coaches and analysts a sense of whether a
+team’s style was sustained throughout the match or concentrated in short bursts, and
+how the game state (winning or losing) affected each team’s attacking output.
+Spatial Patterns
+Match timelines show when shots were taken. To understand where Japan built its
+play, we return to pass locations. Earlier we showed how to build a heatmap of pass
+start positions (Figure 3-12). Let’s now interpret that view for Japan specifically.
+The heatmap reveals a team comfortable circulating the ball across the width of the
+pitch, with particular density in the central third. This aligns with the team’s reputa‐
+tion for possession and midfield control. Rather than relying on long clearances or
+wing-only attacks, Japan spread play through central areas before probing forward.
+A complementary view maps shots by location. If we apply the same approach by
+using shot events instead of passes, we would see Japan’s attempts clustered just
+inside the penalty area, with relatively few speculative long-range efforts. This shot
+profile matches the team’s buildup style: patient passing sequences that aim to create
+higher-quality chances near the goal.
+Player-Level Insights
+Team and match summaries give us the big picture. But soccer is often decided by a
+few key players. Who drove Japan’s possession style, and who took the most shots?
+A simple summary of passes by player already tells us a lot:
+# Pass attempts by Japan players
+japan_passes = passes.query('team_name == "Japan Women\'s"')
+top_passers = (
+    japan_passes.groupby("player_name")["completed"]
+    .agg(attempts="count", completions="sum")
+78 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 99
+================================================================================
+    .assign(
+        pass_accuracy=lambda d: (
+            d["completions"] / d["attempts"]
+        )
+    )
+    .sort_values("attempts", ascending=False)
+    .head(8)
+)
+print(top_passers)
+Table 3-3 highlights Japan’s midfielders as the central hubs of possession. Players like
+Saki Kumagai and Hina Sugita appear frequently as top passers, reflecting their role
+in recycling the ball through the midfield.
+Table 3-3. Completions and pass accuracy per match for Japan
+player_name
+attempts
+completions
+pass_accuracy
+Saki Kumagai
+274
+254
+0.927007
+Aya Sameshima
+268
+205
+0.764925
+Hina Sugita
+264
+216
+0.818182
+Risa Shimizu
+242
+207
+0.855372
+Narumi Miura
+190
+157
+0.826316
+Nana Ichise
+173
+156
+0.901734
+Emi Nakajima
+149
+108
+0.724832
+Yui Hasegawa
+129
+97
+0.751938
+We can produce a similar table for shots:
+# Shot attempts by Japan players
+japan_shots = shots.query('team_name == "Japan Women\'s"')
+top_scorers = (
+    japan_shots.groupby("player_name")["is_goal"]
+    .agg(shots="count", goals="sum")
+    .sort_values("shots", ascending=False)
+    .head(8)
+)
+print(top_scorers)
+For Japan, forwards like Yuika Sugasawa and Mana Iwabuchi stand out as primary
+shooters, with Iwabuchi also contributing goals. You’ll see this result for yourself if
+you run the code and produce the corresponding table.
+Together, these two simple leaderboards give us a concise style profile: midfield
+metronomes maintaining possession, paired with a small group of forwards tasked
+with converting that control into goals.
+Case Study: Japan Women’s at the 2019 World Cup 
+| 
+79
+
+
+================================================================================
+PAGE 100
+================================================================================
+Wrap-up of the Case Study
+By walking through Japan’s tournament, we have put the pieces of EDA together:
+• Tournament-level stats (Figure 3-16) showed Japan’s accuracy in possession but
+•
+lower shot and goal volume than other teams.
+• Match timelines (Figure 3-10) highlighted steady but moderate attacking pres‐
+•
+sure rather than sudden bursts.
+• Spatial views (Figure 3-12) confirmed their preference for central buildup and
+•
+patient circulation.
+• Player summaries pointed to midfielders as passing hubs and a small group of
+•
+forwards as the primary shooters.
+This is the power of exploratory analysis: stitching together multiple views to form a
+coherent story of how a team plays.
+But EDA is not the end goal. Each of the summaries we built—pass accuracy, cumula‐
+tive shots, xG per shot, player leaderboards—can also serve as features for predictive
+models. That is the natural next step: moving from describing what happened to
+predicting what might happen.
+From EDA to Machine Learning
+Our exploration of Japan’s tournament showed how passes, shots, and visualizations
+combine to describe a team’s playing style. EDA gives us that intuition, but its real
+power is that the same cleaned and summarized data can also feed predictive models.
+When we calculated pass accuracy, we treated it as a summary of team style: Japan
+completed four out of every five passes. Yet we can also recast pass accuracy as a
+variable in a model. Teams with higher pass accuracy may be more likely to control
+possession and, in turn, more likely to win. The same holds for expected goals per
+shot, average shot distance, or the percentage of defensive duels won. What looks like
+a descriptive statistic becomes a feature, a piece of structured information that can
+help a model predict outcomes.
+This shift is mostly conceptual. We are not creating new numbers but reinterpreting
+existing ones. During EDA, a number is interesting if it tells us something about what
+happened on the pitch. In modeling, a number is useful if it helps predict what might
+happen next. The same data serves both purposes, depending on the question.
+80 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 101
+================================================================================
+Features as Building Blocks
+Machine learning models cannot read charts or interpret match reports. They require
+inputs in a very specific shape: a table of numbers. Each row represents one observa‐
+tion, such as a team in a given match or a player across a season. Each column
+represents one feature, such as pass accuracy, possession share, or xG per shot.
+Optionally, one column acts as the target—the outcome we want to predict, such as
+whether a team won or lost.
+Conveniently, the DataFrames we built during EDA already have this structure. A
+team-level summary table has rows for teams and columns for statistics, and can
+easily be extended with a target column. The same applies at the player or match
+level. This is why EDA matters so much: it not only helps us understand the game,
+but it also prepares the raw material for modeling.
+In practice, much of the art of applied machine learning lies in deciding which
+features to include. A model trained only on possession share and shots per game
+may tell a different story from one trained on expected goals and defensive duels.
+Choosing features is as much about understanding soccer as it is about manipulating
+data. Analysts who know both the game and the data are best placed to make these
+decisions.
+The Standard Pipeline
+By reframing descriptive statistics as features, we arrive at the standard pipeline used
+across data science:
+EDA → Features → Models
+First, we explore data to see what is there. Next, we translate those insights into
+structured features. Finally, we feed those features into models that generalize from
+past matches to future ones. Each step is built on the preceding one, and each step
+adds a layer of value. The skills you have practiced in this chapter (cleaning data,
+building summaries, and drawing visualizations) are not just preliminary exercises.
+They are the essential preparation for predictive modeling.
+Looking Ahead: From Exploration to Regression
+In the next chapter, we will begin to train models that make use of these features.
+For now, the key takeaway is that exploratory analysis is not a side track. It is the
+foundation on which modeling is built. The statistics you have already computed are
+not only useful for describing matches; they are also the building blocks of prediction.
+With this bridge in place, let’s pause for some practical advice on how to make your
+exploratory analysis more effective before we move on to machine learning.
+Looking Ahead: From Exploration to Regression 
+| 
+81
+
+
+================================================================================
+PAGE 102
+================================================================================
+Conclusion
+In this chapter, we’ve taken our first steps onto the pitch of soccer analytics. We’ve
+learned how to conduct a structured reconnaissance of a new dataset, moving from a
+high-level overview down to the granular details of on-pitch events. We’ve seen how
+to wrangle data with pandas and, most excitingly, how to bring it to life with pitch
+visualizations using mplsoccer.
+Here’s a simple checklist for your future EDA missions:
+1. Understand the levels: what levels of data do you have (match, player, event)?
+1.
+2. Load and inspect: get the data into a DataFrame and use .info() and .head() to
+2.
+get your bearings.
+3. Explore by type: systematically investigate numerical, categorical, and ordinal
+3.
+features.
+4. Visualize: use standard plots and, when appropriate, pitch-based visualizations to
+4.
+uncover patterns.
+5. Clean and aggregate: handle basic data issues and use groupby() to create
+5.
+summaries.
+With these fundamental skills, you are no longer just a spectator. You are an analyst,
+ready to uncover the stories hidden in the data. The rhythm of explore, visualize, and
+clean will serve you well as we move into the predictive modeling chapters ahead.
+Before wrapping up, here are a few habits that can make your exploratory analysis
+more effective and more enjoyable:
+• Keep notes as you go. Document your steps directly in Jupyter notebooks so that
+•
+you or your teammates can revisit and reproduce the workflow later.
+• Frame questions in soccer terms. Code is only a tool. The real power comes from
+•
+asking meaningful soccer questions such as Which players connect midfield to
+attack? rather than Which columns can I plot?
+• Watch out for bias. Focusing on favorite players or teams is tempting. A good
+•
+analyst looks across the entire pitch and lets the data challenge preconceptions.
+• Mix quick checks with deeper dives. Rapid visualizations help spot anomalies,
+•
+while more polished figures communicate insights to others.
+82 
+| 
+Chapter 3: Exploratory Data Analysis in Soccer
+
+
+================================================================================
+PAGE 103
+================================================================================
+Here are a few tasks you can try to practice your EDA skills:
+• For Figure 3-9, can you identify the specific matches where the
+•
+US had unusually low passing accuracy?
+• Can you add goals or xG to the scatterplot in Figure 3-11 to
+•
+see whether teams that create higher-quality chances also score
+more goals?
+• Pick a different team from the tournament and create a similar
+•
+case study to the one we did for Japan. How does its style
+compare?
+The goal is not to squeeze every possible number out of the data but to establish a
+rhythm: explore, visualize, and clean. Once you are comfortable with this rhythm,
+you will be ready to take the next step into predictive modeling.
+Conclusion 
+| 
+83
+
+
+================================================================================
+PAGE 104
+================================================================================
+
+
+================================================================================
+PAGE 105
+================================================================================
+CHAPTER 4
+Regression Techniques for Soccer Analytics
+In Chapters 2 and 3, we built the foundations of the analytical workflow used
+throughout this book. We set up the environment, learned the core tools, and used
+exploratory analysis to understand the data. The next step is to move from descrip‐
+tion to prediction.
+This chapter introduces regression, the first predictive framework we will present in
+depth. Regression is used when the outcome we want to estimate is numerical rather
+than categorical. In soccer, that leads to questions such as these:
+• What is a player’s market value likely to be next season?
+•
+• How many goals can we expect a team to score in its next match?
+•
+• How many kilometers will a midfielder cover in a game?
+•
+These are all questions that regression models can help us answer. Regression does
+not remove uncertainty, but it gives us a structured way to estimate expected values,
+compare influences, and understand how outcomes change as inputs change. That
+makes it useful for both forecasting and explanation.
+By the end of this chapter, you will be able to do the following:
+• Understand the core concepts of regression and how it applies to soccer.
+•
+• Build, train, and interpret a linear regression model to predict player market
+•
+values.
+• Use Poisson regression to model the number of goals in a match, a classic soccer
+•
+analytics problem.
+• Implement K-nearest neighbors (KNN) regression to find and analyze similar
+•
+players.
+85
+
+
+================================================================================
+PAGE 106
+================================================================================
+• Evaluate your models to understand how well they perform and where they can
+•
+be improved.
+We will work mainly with pandas, Matplotlib, and Seaborn, while also introducing
+scikit-learn and statsmodels. The goal is not only to fit regression models, but to
+understand when they are appropriate, how to evaluate them, and how to interpret
+them in soccer terms.
+From Lines on a Field to Lines of Best Fit:
+Linear Regression
+Let’s start with the most fundamental regression algorithm: linear regression. The
+concept is fairly intuitive; it’s all about finding a straight-line relationship between
+one or more input variables (we’ll call them features or predictors) and a single output
+variable (the target).
+Imagine you’re a scout trying to estimate a young player’s future market value. You’d
+probably look at a few key details: their age, the number of goals they’ve scored,
+maybe the number of assists they’ve provided. Your brain intuitively creates a model:
+a younger player with lots of goals is probably worth more. Linear regression does the
+same thing, but with mathematical precision.
+The algorithm tries to find the best straight line that describes the data. For example,
+if we plot a player’s market value against the number of goals they scored last season,
+we might see a pattern. As goals increase, market value tends to increase. Linear
+regression finds the one line that cuts through that data and best represents that
+trend.
+Predicting Market Value: A Player’s Worth
+Let’s make this approach concrete with a classic soccer analytics problem: predicting
+a player’s market value. A player’s value is determined by a host of factors, but for our
+first model, we’ll keep it simple. We’ll try to predict a player’s market value based on
+just one feature: their goal-scoring record.
+First, we need data. We’ll use a simulated dataset for this example, representing a
+collection of attacking players in a top European league:
+import pandas as pd
+# Simulated data for player market values
+data = {
+    "Player": [
+        "Player A",
+        "Player B",
+        "Player C",
+        "Player D",
+86 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 107
+================================================================================
+        "Player E",
+        "Player F",
+        "Player G",
+    ],
+    "Goals": [22, 15, 8, 25, 12, 18, 5],
+    "MarketValue_Millions": [90, 60, 25, 100, 45, 70, 15],
+}
+df = pd.DataFrame(data)  
+print(df)
+Create a pandas DataFrame, our primary tool for handling structured data.
+Before we build a model, it’s always a good idea to visualize the relationship. A
+scatterplot is perfect for this. (We’ll keep using the shared plotting helper introduced
+in Chapter 3; its implementation details are omitted here for brevity.) The following
+code implements such a scatterplot:
+import seaborn as sns
+from soccerml_figures.plotting import (
+    apply_margins,
+    create_figure,
+    output_path,
+    save_figure,
+    use_publication_style,
+)
+use_publication_style()  
+fig, ax = create_figure()
+sns.scatterplot(
+    x="Goals", y="MarketValue_Millions", data=df, ax=ax,
+)  
+ax.set_title("Player Market Value vs. Goals Scored")
+ax.set_xlabel("Goals Scored Last Season")
+ax.set_ylabel("Market Value (in Millions €)")
+apply_margins(fig)
+save_figure(fig, output_path(4, "market-value-scatter"))  
+Use Seaborn’s styling to make our plots look a bit nicer.
+The scatterplot() function is a straightforward way to visualize the relation‐
+ship between two numerical variables.
+Save the plot to a file so we can include it in our reports (and this chapter!).
+Figure 4-1 shows the clear positive relationship: players who score more goals tend
+to have a higher market value. The line is not perfectly straight, but the trend is
+unmistakable. This is a good sign! It suggests that linear regression is a reasonable
+model to try here.
+From Lines on a Field to Lines of Best Fit: Linear Regression 
+| 
+87
+
+
+================================================================================
+PAGE 108
+================================================================================
+Figure 4-1. Player market value versus goals scored
+Building the Model: The Line of Best Fit
+Now for the exciting part: building the model. We’ll use the scikit-learn library, which
+is the gold standard for machine learning in Python. The process is remarkably
+straightforward:
+from sklearn.linear_model import LinearRegression
+# Prepare the data for scikit-learn
+X = df[["Goals"]]  
+y = df["MarketValue_Millions"]
+# Create and train the model
+model = LinearRegression()  
+model.fit(X, y)  
+# Get the model's parameters
+intercept = model.intercept_
+slope = model.coef_[0]
+print(f"Model Intercept: {intercept:.2f}")
+print(f"Model Slope (Coefficient for Goals): {slope:.2f}")
+scikit-learn expects the features (X) to be in a 2D array-like structure, which is
+why we use double brackets [[]]. The target (y) can be a 1D series.
+Create an instance of the LinearRegression class.
+The .fit() method is where the magic happens. The model learns the relation‐
+ship between the features (X) and the target (y) from the data.
+88 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 109
+================================================================================
+So, what do these intercept and slope values mean? They define our line of best fit.
+Here’s the equation of our model:
+Market value = slope × goals + intercept
+In our case, the model found an intercept of –5.5 and a slope of approximately 4.15:
+Intercept (–5.5)
+A player who scores 0 goals is predicted to have a market value of –€5.5 million.
+This obviously doesn’t make sense in the real world! This occurrence is common
+in simple models, however, and highlights their limitations. The intercept is often
+just a mathematical necessity to correctly position the line and shouldn’t always
+be interpreted literally, especially when the feature (goals) is never 0 in our data’s
+context.
+Slope (4.15)
+For every additional goal a player scores, their predicted market value increases
+by €4.15 million. This may seem like a lot, but this is what the (simulated) data
+tells us! It is the core insight from our model. It quantifies the relationship we saw
+in the scatterplot.
+Visualizing the Model
+Now we can visualize our model’s predictions by drawing this line of best fit on our
+scatterplot:
+fig, ax = create_figure()
+sns.scatterplot(
+    x="Goals",
+    y="MarketValue_Millions",
+    data=df,
+    s=100,
+    label="Actual Data",
+    ax=ax,
+)  
+# Plot the regression line
+sorted_df = df.sort_values("Goals")
+ax.plot(
+    sorted_df["Goals"],
+    model.predict(sorted_df[["Goals"]]),
+    color="red",
+    linewidth=3,
+    label="Regression Line",
+)  
+ax.set_title("Linear Regression: Market Value vs. Goals Scored")
+ax.set_xlabel("Goals Scored Last Season")
+ax.set_ylabel("Market Value (in Millions €)")
+ax.legend()
+From Lines on a Field to Lines of Best Fit: Linear Regression 
+| 
+89
+
+
+================================================================================
+PAGE 110
+================================================================================
+apply_margins(fig)
+save_figure(fig, output_path(4, "market-value-regression-line"))
+Make the data points a bit larger (s=100) to make them stand out.
+Use model.predict(X) to get the model’s predicted values for each player and
+plot this as a line.
+Figure 4-2 shows our linear regression model as a line. It’s the single straight line that
+minimizes the overall distance to all the data points. It captures the essence of the
+trend, and we can now use it to make predictions for new players.
+Figure 4-2. Linear regression: market value versus goals scored
+Evaluating Performance: How Good Is Our Model?
+We’ve built a model, and it looks reasonable on the plot, but how do we quantify
+its performance? A visual check is good, but it’s not enough. We need metrics. For
+regression models, one of the most common metrics is the R-squared (R2) value.
+R2 tells us the percentage of the variation in the target variable (market value) that can
+be explained by our features (goals). The value ranges from 0 to 1:
+• An R2 of 1 means the model perfectly explains the data (all points lie exactly on
+•
+the regression line).
+• An R2 of 0 means the model explains none of the variability.
+•
+90 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 111
+================================================================================
+Let’s calculate the R2 for our model:
+from sklearn.metrics import r2_score
+# Get the model's predictions
+y_pred = model.predict(X)
+# Calculate R-squared
+r2 = r2_score(y, y_pred)
+print(f"R-squared: {r2:.2f}")
+The output will be an R2 value of around 0.95. This is a very high value! It suggests
+that 95% of the variation in players’ market values in our dataset can be explained
+by the number of goals they scored. In a real-world scenario, a value this high for a
+simple one-feature model is rare and might suggest that our simulated data is a bit
+too perfect. However, this output serves to illustrate the concept.
+Another way to evaluate the model is to look at the residuals—the differences between
+the actual values and the predicted values. A good model should have residuals that
+are randomly scattered around 0. Let’s take a look:
+residuals = y - y_pred
+fig, ax = create_figure()
+sns.scatterplot(x=y_pred, y=residuals, ax=ax)
+ax.axhline(y=0, color="r", linestyle="--")  
+ax.set_xlabel("Predicted Market Value")
+ax.set_ylabel("Residuals")
+ax.set_title("Residual Plot")
+apply_margins(fig)
+save_figure(fig, output_path(4, "market-value-residuals"))
+Add a horizontal line at y=0 to make it easier to see whether the residuals are
+evenly distributed.
+If you see a clear pattern in Figure 4-3 (e.g., a U-shape), it’s a sign that the linear
+model might not be the best fit for the data. In our case, the points are few, but they
+seem to be randomly scattered, which is what we want to see. So although the model
+might not be ideal for a general use case, for this dataset, the residuals suggest that it’s
+a good fit.
+This is just the beginning of regression. We’ve used only one feature, but the real
+power comes when we add more. What if we added assists, age, and position? The
+principles remain the same, but the models become more powerful and, often, more
+accurate.
+From Lines on a Field to Lines of Best Fit: Linear Regression 
+| 
+91
+
+
+================================================================================
+PAGE 112
+================================================================================
+Figure 4-3. Our residual plot for linear regression
+Counting Goals: Poisson Regression
+Linear regression is great for predicting continuous values like market value, but what
+about counting things? In soccer, one of the most fundamental counts is the number
+of goals scored in a match. This is a classic soccer analytics problem, and it has a
+specific tool that is perfect for the job: Poisson regression.
+Why can’t we just use linear regression to predict goals? There are a few reasons:
+• Goals are counts, not continuous values. A team can score 0, 1, 2, or 3 goals, but
+•
+not 2.5 goals. Linear regression can predict fractional values, which don’t make
+sense here.
+• Goals are non-negative. A team can’t score negative goals. A linear regression
+•
+model could, in theory, predict a negative number.
+• The relationship isn’t always linear. The factors that influence goal scoring might
+•
+not have a simple straight-line relationship with the number of goals.
+Poisson regression is a type of generalized linear model (GLM) that is specifically
+designed for count data. This model makes a few key assumptions, most notably that
+the number of events (goals) in a fixed interval (a match) is, on average, constant, and
+the events are independent. This fits the scenario of a soccer match quite well.
+92 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 113
+================================================================================
+Predicting Goals in a Match
+Let’s try to predict the number of goals a team might score based on the number of
+shots on target that players take. We’ll use another simulated dataset:
+import pandas as pd
+# Simulated data for goals scored
+data = {
+    "Team
+body": [f"Team {i}" for i in range(1, 21)],
+    "ShotsOnTarget": [ 5, 8, 12, 4, 6, 9, 10, 3, 7, 11, 5, 8, 12,
+        4, 6, 9, 10, 3, 7, 11],
+    "Goals": [1, 2, 3, 0, 1, 2, 2, 0, 1, 3, 1, 2, 4, 1, 1, 2, 3, 0, 2, 3]
+}
+goals_df = pd.DataFrame(data)
+print(goals_df.head())
+Now, let’s build our Poisson regression model. This time, we’ll use the statsmodels
+library, which provides excellent support for GLMs and gives detailed statistical
+summaries of the model’s performance:
+import statsmodels.api as sm
+# Build the Poisson model
+formula = "Goals ~ ShotsOnTarget"  
+model = sm.GLM.from_formula(
+    formula, data=goals_df, family=sm.families.Poisson(),
+).fit()  
+# Print the model summary
+print(model.summary())
+statsmodels allows us to use an R-style formula to define our model. Goals ~
+ShotsOnTarget means we are predicting Goals based on ShotsOnTarget.
+Create and fit the Poisson model in one line.
+The model summary is packed with information, but let’s focus on the coef column
+for our ShotsOnTarget variable. This column tells us the relationship between shots
+on target and the log of the expected number of goals. This is a key difference from
+linear regression. In Poisson regression with a log link (the default), the coefficients
+are on a logarithmic scale.
+To interpret the coefficient, we need to exponentiate it. If the coefficient for ShotsOn
+Target is, say, 0.15, then exp(0.15) ≈ 1.16. This means that for every additional
+shot on target, the expected number of goals is multiplied by 1.16, or in other words,
+it increases by 16%.
+Counting Goals: Poisson Regression 
+| 
+93
+
+
+================================================================================
+PAGE 114
+================================================================================
+Visualizing the Poisson Model
+Visualizing a Poisson model is a bit different from visualizing a linear model. Instead
+of a straight line, we get a curve that represents the expected number of goals for a
+given number of shots on target. Here’s the code:
+# Get the model's predictions
+goals_df["predicted_goals"] = model.predict(goals_df)
+sorted_goals_df = goals_df.sort_values("ShotsOnTarget")
+fig, ax = create_figure()
+# Plot actual goals
+sns.scatterplot(
+    x="ShotsOnTarget",
+    y="Goals",
+    data=goals_df,
+    label="Actual Goals",
+    s=100,
+    ax=ax,
+)
+# Plot predicted goals
+ax.plot(
+    sorted_goals_df["ShotsOnTarget"],
+    sorted_goals_df["predicted_goals"],
+    color="red",
+    linestyle="--",
+    label="Predicted Goals (Poisson)",
+)
+ax.set_title("Poisson Regression: Goals vs. Shots on Target")
+ax.set_xlabel("Shots on Target")
+ax.set_ylabel("Number of Goals")
+ax.legend()
+apply_margins(fig)
+save_figure(fig, output_path(4, "goals-poisson-regression"))
+As you can see in Figure 4-4, the predicted line is not straight.
+The predicted line curves upward, suggesting that the effect of an additional shot on
+target is greater when a team is already taking many shots. This kind of nonlinear
+relationship is something that Poisson regression can capture, while a simple linear
+model cannot.
+94 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 115
+================================================================================
+Figure 4-4. Poisson regression: goals versus shots on target
+Finding Similar Players: K-Nearest Neighbors Regression
+So far, we’ve looked at models that try to find a mathematical formula (a line or
+a curve) to describe the relationship between features and a target. But what if the
+relationship is too complex for a simple formula? What if we just want to find players
+who are similar to a given player and see their market values?
+This is where KNN regression comes in. It’s a completely different way of thinking
+about prediction. Instead of learning a single model from all the data, KNN makes
+predictions on the fly by looking at the neighbors of a data point.
+The idea is simple and intuitive:
+1. Choose a number k. This is the number of neighbors to consider.
+1.
+2. Find the k nearest neighbors by finding the k players in your dataset who are
+2.
+most similar, based on their features (e.g., goals, assists, age), to the new player
+you want to predict the value for.
+3. Average their values. The predicted market value for the new player is simply the
+3.
+average market value of their k nearest neighbors.
+It’s like asking, “This new young striker scored 15 goals last season. Who are the five
+most similar players to them in my database, and what are their market values?” The
+average of those values is your KNN prediction.
+Finding Similar Players: K-Nearest Neighbors Regression 
+| 
+95
+
+
+================================================================================
+PAGE 116
+================================================================================
+Predicting Player Value with KNN
+Let’s use our market value dataset again, but this time with an additional feature,
+assists:
+import pandas as pd
+# Simulated data with two features
+data = {
+    "Player": [
+        "Player A",
+        "Player B",
+        "Player C",
+        "Player D",
+        "Player E",
+        "Player F",
+        "Player G",
+    ],
+    "Goals": [22, 15, 8, 25, 12, 18, 5],
+    "Assists": [10, 12, 5, 8, 9, 7, 3],
+    "MarketValue_Millions": [90, 60, 25, 100, 45, 70, 15],
+}
+knn_df = pd.DataFrame(data)
+print(knn_df)
+Now, let’s use scikit-learn to build a KNN regression model. A crucial step before
+using KNN is feature scaling. KNN works by measuring distances between data
+points. If one feature (like goals) has a much larger scale than another (like assists), it
+will dominate the distance calculation. We need to scale our features so they are on a
+comparable scale:
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
+# Prepare the data
+features = ["Goals", "Assists"]
+X = knn_df[features]
+y = knn_df["MarketValue_Millions"]
+# Scale the features
+scaler = StandardScaler()  
+X_scaled = scaler.fit_transform(X)
+# Create and train the model (let's use k=3)
+knn_model = KNeighborsRegressor(n_neighbors=3)  
+knn_model.fit(X_scaled, y)
+# Let's predict the value of a new player
+new_player = [[20, 9]]  # 20 goals, 9 assists
+new_player_scaled = scaler.transform(new_player)  
+predicted_value = knn_model.predict(new_player_scaled)
+print(
+    "Predicted Market Value for new player: "
+    f"{predicted_value[0]:.2f} Million €"
+)
+96 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 117
+================================================================================
+StandardScaler() transforms the data to have a mean of 0 and a standard
+deviation of 1.
+Create a KNN regressor and specify n_neighbors=3.
+We must apply the same scaling to our new data before making a prediction.
+Choosing the Right k
+The choice of k is crucial. A small k (like 1 or 2) will make the model very sensitive
+to noise in the data. A large k will make the model’s predictions smoother but might
+obscure local patterns. Finding the optimal k often involves trying several values and
+seeing which one gives the best performance on a validation set—a topic we’ll explore
+more in the following section.
+KNN is a powerful and intuitive algorithm, especially when the relationship between
+features and the target is complex and nonlinear. It’s a great tool to have in your
+soccer analytics toolbox.
+Evaluating and Interpreting Regression Models
+in Soccer Contexts
+Building a model is one thing, but knowing whether it’s any good is another. In
+the world of soccer analytics, a model that can’t be trusted is worse than no model
+at all. It can lead to poor decisions, like overpaying for a player or misjudging a
+team’s strength. In this section, we’ll discuss R2 key techniques for evaluating and
+interpreting your regression models.
+Using Key Performance Metrics
+We’ve already touched on R2, but let’s formalize it and introduce a few other key
+metrics:
+R-squared (R2)
+As you saw, this tells you the proportion of the variance in the target variable that
+is predictable from the feature(s). It’s a measure of how well the model explains
+the data. A higher R2 is generally better, but it’s not the whole story. A high R2
+on your training data doesn’t guarantee that the model will perform well on new,
+unseen data.
+Evaluating and Interpreting Regression Models in Soccer Contexts 
+| 
+97
+
+
+================================================================================
+PAGE 118
+================================================================================
+Mean absolute error (MAE)
+This is the average of the absolute differences between the predicted and actual
+values. It gives you a straightforward idea of how wrong your predictions are on
+average, in the original units of the target variable. For our market value model,
+an MAE of 5 would mean our predictions are off by €5 million on average.
+Mean squared error (MSE)
+This is the average of the squared differences between the predicted and actual
+values. By squaring the errors, larger errors are penalized more heavily than
+smaller ones. The metric is common, but because the units are squared (e.g.,
+millions of euros squared), it can be hard to interpret.
+Root mean squared error (RMSE)
+This is the square root of the MSE. It brings the metric back to the original units
+of the target variable, making it easier to interpret than MSE. It’s like MAE, but it
+still gives more weight to larger errors.
+Let’s calculate these for our linear regression model:
+from sklearn.metrics import (
+    mean_absolute_error,
+    mean_squared_error,
+)
+import numpy as np
+# We already have y (actual) and y_pred (predicted)
+mae = mean_absolute_error(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+rmse = np.sqrt(mse)
+print(f"Mean Absolute Error (MAE): {mae:.2f} Million €")
+print(f"Root Mean Squared Error (RMSE): {rmse:.2f} Million €")
+Understanding the Importance of a Validation Set
+So far, we’ve been training and evaluating our models on the same data. This is a
+cardinal sin in machine learning! A model can perform brilliantly on the data it has
+already seen but fail miserably on new data. This is called overfitting.
+To get a true sense of a model’s performance, you need to test it on data it has never
+seen before. The standard practice is to split your data into two or three sets:
+Training set
+The largest part of the data, used to train the model.
+Validation set
+Used to tune the model’s parameters (like the k in KNN) and to compare models.
+98 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 119
+================================================================================
+Test set
+Used for the final evaluation of the chosen model. You touch this set only once, at
+the very end.
+We’ll dive much deeper into splitting data in later chapters, but it’s a crucial concept
+to understand now.
+Interpreting Coefficients
+For models like linear and Poisson regression, the coefficients are a goldmine of
+information.
+• In linear regression, the coefficient tells you the average change in the target for a
+•
+one-unit change in the feature.
+• In Poisson regression (with a log link), you need to exponentiate the coefficient.
+•
+The result tells you the multiplicative factor by which the expected count changes
+for a one-unit change in the feature.
+This is incredibly useful for understanding why your model is making certain predic‐
+tions. It moves you from just being a data scientist to being a true analyst who can
+provide actionable insights.
+Visualizing KNN: Decision Boundaries
+Because KNN doesn’t create a simple formula, visualizing it is a bit different. We can’t
+draw a single line. Instead, we can visualize the decision boundary—the regions in
+the feature space where the model’s prediction is the same. For KNN regression, this
+creates a step-like surface.
+Let’s visualize the feature space for our two features, Goals and Assists, and see how
+a new player fits in:
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
+X_2d = df[["Goals", "Assists"]]
+y_2d = df["MarketValue_Millions"]
+scaler_2d = StandardScaler()
+X_2d_scaled = scaler_2d.fit_transform(X_2d)
+knn_2d = KNeighborsRegressor(n_neighbors=best_k)
+knn_2d.fit(X_2d_scaled, y_2d)
+goals_range = np.linspace(
+    X_2d["Goals"].min(), X_2d["Goals"].max(), 80,
+)
+assists_range = np.linspace(
+    X_2d["Assists"].min(), X_2d["Assists"].max(), 80,
+)
+goals_grid, assists_grid = np.meshgrid(
+    goals_range, assists_range,
+Evaluating and Interpreting Regression Models in Soccer Contexts 
+| 
+99
+
+
+================================================================================
+PAGE 120
+================================================================================
+)
+grid_points = np.c_[goals_grid.ravel(), assists_grid.ravel()]
+predictions = knn_2d.predict(
+    scaler_2d.transform(grid_points)
+).reshape(goals_grid.shape)
+new_player = pd.DataFrame({"Goals": [20], "Assists": [8]})
+fig, ax = create_figure()
+contour = ax.contourf(
+    goals_grid,
+    assists_grid,
+    predictions,
+    levels=15,
+    cmap="viridis",
+    alpha=0.75,
+)
+ax.scatter(
+    df["Goals"],
+    df["Assists"],
+    c=df["MarketValue_Millions"],
+    s=70,
+    edgecolors="black",
+    linewidths=0.6,
+    cmap="viridis",
+    label="Existing Players",
+)
+ax.scatter(
+    new_player["Goals"],
+    new_player["Assists"],
+    color="red",
+    marker="*",
+    s=220,
+    edgecolors="white",
+    linewidths=1.5,
+    label="New Player",
+    zorder=4,
+)
+fig.colorbar(contour, ax=ax, pad=0.02,).set_label(
+    "Predicted Market Value (€M)"
+)
+ax.set_xlabel("Goals")
+ax.set_ylabel("Assists")
+ax.set_title(f"KNN Decision Surface (K={best_k})")
+ax.legend(loc="upper left")
+apply_margins(fig, right=0.9)
+save_figure(fig, output_path(4, "knn-player-similarity"))
+The plot in Figure 4-5 shows our existing players, with their market value indicated
+by the variation in tone.
+100 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 121
+================================================================================
+Figure 4-5. KNN regression: player similarity in feature space
+In this plot, the star is our new player. The KNN algorithm will find the k closest
+points to this star and average their values to make a prediction.
+We can also see how the value of k changes the prediction surface. A smaller k creates
+a more jagged, complex surface, while a larger k creates a smoother one. This code
+helps visualize the R2 score as function of k:
+k_values = range(1, 21)
+train_scores = []
+test_scores = []
+for k in k_values:
+    knn = KNeighborsRegressor(n_neighbors=k)
+    knn.fit(X_train_scaled, y_train)
+    train_scores.append(knn.score(X_train_scaled, y_train))
+    test_scores.append(knn.score(X_test_scaled, y_test))
+fig, ax = create_figure()
+ax.plot(
+    k_values,
+    train_scores,
+    label="Training R²",
+    marker="o",
+    linewidth=2,
+)
+ax.plot(
+    k_values,
+    test_scores,
+    label="Test R²",
+    marker="s",
+    linewidth=2,
+)
+Evaluating and Interpreting Regression Models in Soccer Contexts 
+| 
+101
+
+
+================================================================================
+PAGE 122
+================================================================================
+ax.set_xlabel("K (Number of Neighbors)")
+ax.set_ylabel("R² Score")
+ax.set_title("KNN Performance vs. K Value")
+ax.legend()
+ax.grid(True, alpha=0.3)
+apply_margins(fig)
+save_figure(fig, output_path(4, "knn-k-comparison"))
+As shown in Figure 4-6, the model’s predictions change as we vary k. Choosing the
+right k is a trade-off between fitting the training data well (low k) and creating a more
+generalizable model (high k).
+Figure 4-6. Comparison of KNN with different k values
+Comparing Models
+We’ve now seen three regression models. Which one do we choose? This is where our
+evaluation metrics come in handy. Let’s imagine we’ve run all our models on the same
+dataset and calculated their R2, MAE, and RMSE on a test set:
+fig, axes = create_figure(nrows=1, ncols=3)
+axes[0].bar(
+    results_df["Model"], results_df["R²"], color="#4C78A8",
+)
+axes[0].set_title("R²")
+axes[1].bar(
+    results_df["Model"], results_df["MAE"], color="#F58518",
+)
+axes[1].set_title("MAE")
+axes[2].bar(
+    results_df["Model"], results_df["RMSE"], color="#54A24B",
+)
+axes[2].set_title("RMSE")
+for ax in axes:
+102 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 123
+================================================================================
+    ax.grid(True, alpha=0.25, axis="y")
+fig.suptitle("Model Comparison: Performance Metrics")
+apply_margins(fig, top=0.8, bottom=0.22, wspace=0.35)
+save_figure(fig, output_path(4, "model-comparison-metrics"))
+The comparison in Figure 4-7 allows you to see at a glance which model is perform‐
+ing best.
+Figure 4-7. Comparing the models’ performance metrics
+This kind of comparison is essential. It allows you to see at a glance which model is
+performing best for your specific problem. In this hypothetical case, linear regression
+has the highest R2 and the lowest errors, suggesting it’s the best model for this partic‐
+ular (and very clean) dataset. In the real world, the choice is often not so clear-cut,
+and you’ll need to balance performance with interpretability and computational cost.
+Advanced Topics in Poisson Regression:
+Overdispersion and Zero-Inflation
+While Poisson regression is a powerful tool for modeling count data, it makes a
+strong assumption: that the mean and variance of the data are equal. In the real world
+of soccer analytics, this assumption often doesn’t hold. Let’s explore two common
+issues and how to address them.
+Overdispersion: When Variance Exceeds the Mean
+In many soccer datasets, you’ll find that the variance in goals scored is greater than
+the mean. This is called overdispersion. For example, if the average number of goals
+per match is 1.5, but some matches have 0 goals while others have 5 or 6, the variance
+will be much larger than 1.5.
+Advanced Topics in Poisson Regression: Overdispersion and Zero-Inflation 
+| 
+103
+
+
+================================================================================
+PAGE 124
+================================================================================
+Why does this matter? When overdispersion is present, the standard errors of the
+Poisson model are underestimated, which means your confidence intervals will be
+too narrow and your p-values will be too optimistic. A p-value tells you how statisti‐
+cally significant your result is. Typically, a p-value below 0.05 is deemed statistically
+significant, and above this threshold is considered insignificant, though this cutoff
+can vary with the use case. You might think a predictor is significant when it’s not.
+To check for overdispersion, we can calculate the dispersion parameter (φ; phi):
+# Using our previous Poisson model
+residuals = model.resid_pearson  
+phi = sum(residuals ** 2) / (
+    len(goals_df) - len(model.params)
+)  
+print(f"Dispersion parameter: {phi:.2f}")
+Pearson residuals are standardized residuals that should have a variance close to 1
+if the model fits well.
+The dispersion parameter is calculated by dividing the sum of squared Pearson
+residuals by the degrees of freedom.
+If φ is much greater than 1 (say, greater than 1.5), you have overdispersion. In such
+cases, a negative binomial regression model is often more appropriate.
+Negative Binomial Regression
+The negative binomial model is a generalization of the Poisson model that allows
+the variance to be greater than the mean. It introduces an additional parameter that
+captures the extra variability in the data:
+import statsmodels.formula.api as smf
+# Fit a negative binomial model
+nb_model = smf.negativebinomial(
+    "Goals ~ ShotsOnTarget", data=goals_df,
+).fit()
+print(nb_model.summary())
+The negative binomial model will typically provide more-realistic standard errors
+and confidence intervals when overdispersion is present. It’s a go-to model for soccer
+goal data.
+Zero Inflation: Too Many Zeros
+Another common issue in soccer data is zero inflation—an excess of matches with no
+goals. This can happen for various reasons: strong defensive tactics, poor attacking
+play, or even weather conditions. Standard Poisson or negative binomial models
+might not capture this pattern well.
+104 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 125
+================================================================================
+Zero-inflated models address this by assuming that zeros can come from two sources:
+Structural zeros
+Matches where scoring was essentially impossible (e.g., extreme defensive play)
+Sampling zeros
+Matches where goals could have been scored, but by chance, they weren’t
+The model has two components:
+• A logistic regression component that predicts the probability of a structural zero
+•
+• A count model (Poisson or negative binomial) for the nonstructural cases
+•
+Here’s how to fit a zero-inflated Poisson model:
+from statsmodels.discrete.count_model import ZeroInflatedPoisson
+# Fit a zero-inflated Poisson model
+zip_model = ZeroInflatedPoisson.from_formula(
+    "Goals ~ ShotsOnTarget",  
+    data=goals_df,
+    exog_infl="ShotsOnTarget",  
+    inflation="logit",
+).fit()
+print(zip_model.summary())
+The main count model formula
+The formula for the zero-inflation component. Here, we’re using the same pre‐
+dictor, but you can use different ones.
+Zero-inflated models are particularly useful when you believe that the process gener‐
+ating zeros is fundamentally different from the process generating positive counts.
+Hurdle Models: An Alternative Approach
+Hurdle models are similar to zero-inflated models but with a key difference. They
+assume that all zeros come from one process (the hurdle), and all positive counts
+come from another. There’s no mixing of structural and sampling zeros.
+The model has two stages:
+1. Binary model: Predicts whether the count is zero or positive (logistic regression)
+1.
+2. Truncated count model: Predicts the count, given that it’s positive (truncated
+2.
+Poisson or negative binomial)
+Advanced Topics in Poisson Regression: Overdispersion and Zero-Inflation 
+| 
+105
+
+
+================================================================================
+PAGE 126
+================================================================================
+While Python doesn’t have a built-in hurdle model in statsmodels, you can imple‐
+ment one manually:
+# Stage 1: Binary model for zero vs. nonzero
+goals_df["HasGoals"] = (goals_df["Goals"] > 0).astype(int)
+binary_model = smf.logit(
+    "HasGoals ~ ShotsOnTarget", data=goals_df,
+).fit()
+# Stage 2: Truncated count model for positive goals
+goals_positive = goals_df[goals_df["Goals"] > 0]
+truncated_model = smf.poisson(
+    "Goals ~ ShotsOnTarget", data=goals_positive,
+).fit()
+print("Binary Model (Zero vs. Positive):")
+print(binary_model.summary())
+print("\nTruncated Count Model (Positive Goals Only):")
+print(truncated_model.summary())
+Hurdle models are great when you believe that the factors influencing whether a team
+scores at all are different from the factors influencing the number of goals they score
+after they’ve crossed that hurdle.
+Model Diagnostics: Ensuring That Your Model Is Sound
+Building a model is one thing; ensuring it’s reliable is another. Model diagnostics are
+the checks and balances that help you understand whether your model is trustworthy.
+In this section, we’ll cover some essential diagnostic techniques for regression models
+in soccer analytics.
+Residual Analysis: Looking for Patterns
+You’ve already seen residual plots for linear regression. The same principle applies
+to GLMs. Residuals are the differences between what your model predicts and what
+actually happened. A good model should have residuals that are randomly scattered,
+with no clear patterns.
+GLMs can have several types of residuals:
+Pearson residuals
+Standardized residuals that should have a mean of 0 and a variance of 1 if the
+model fits well.
+Deviance residuals
+Measure each observation’s contribution to the model’s deviance (a measure of
+model fit).
+106 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 127
+================================================================================
+Anscombe residuals
+Designed to be more normally distributed than Pearson or deviance residuals,
+especially for count data.
+Let’s plot the deviance residuals for our Poisson model:
+# Get deviance residuals
+dev_residuals = model.resid_deviance
+fig, ax = create_figure()
+ax.scatter(model.fittedvalues, dev_residuals)
+ax.axhline(y=0, color="r", linestyle="--")
+ax.set_xlabel("Fitted Values")
+ax.set_ylabel("Deviance Residuals")
+ax.set_title("Residual Plot for Poisson Regression")
+apply_margins(fig)
+save_figure(fig, output_path(4, "poisson-residuals"))
+If you see a funnel shape (residuals spreading out as fitted values increase), it might
+indicate heteroscedasticity or overdispersion. Heteroscedasticity refers to a situation in
+which the variability of a dependent variable is unequal across the range of values of
+an independent variable. If you see a U-shape or other clear pattern, it suggests the
+model might be missing important features or using the wrong link function.
+Goodness-of-Fit Tests
+How do we quantify how well our model fits the data? Several tests can help:
+Deviance test
+Compares the model’s deviance to a chi-squared distribution. A low p-value
+suggests poor fit.
+Pearson chi-square test
+Similar to the deviance test but uses Pearson residuals.
+Here’s how to conduct goodness-of-fit tests:
+# Calculate deviance
+deviance = model.deviance
+df_resid = model.df_resid
+# Compare to chi-squared distribution
+from scipy.stats import chi2
+p_value = 1 - chi2.cdf(deviance, df_resid)
+print(f"Deviance: {deviance:.2f}")
+print(f"Degrees of Freedom: {df_resid}")
+print(f"P-value: {p_value:.4f}")
+If the p-value is very low (e.g., < 0.05), it suggests the model doesn’t fit the data
+well. This could be due to overdispersion, missing predictors, or an incorrect model
+specification.
+Model Diagnostics: Ensuring That Your Model Is Sound 
+| 
+107
+
+
+================================================================================
+PAGE 128
+================================================================================
+Influential Observations: Outliers that Matter
+Some data points have a disproportionate influence on the model. These are called
+influential observations. Two key measures help identify them:
+Cook’s distance
+Measures how much the model’s predictions would change if a particular obser‐
+vation were removed. Values greater than 1 (or 4/n, where n is the sample size)
+are considered influential.
+Leverage
+Measures how far an observation’s predictor values are from the mean. High
+leverage points can pull the regression line toward them.
+Here’s how to visualize any influential data points:
+from statsmodels.stats.outliers_influence import OLSInfluence
+# For GLMs, we can use similar diagnostics
+influence = model.get_influence()
+cooks_d = influence.cooks_distance[0]
+fig, ax = create_figure()
+ax.stem(range(len(cooks_d)), cooks_d, markerfmt=",")
+ax.set_xlabel("Observation Index")
+ax.set_ylabel("Cook's Distance")
+ax.set_title("Influential Observations")
+ax.axhline(
+    y=4 / len(goals_df),
+    color="r",
+    linestyle="--",
+    label="Threshold",
+)
+ax.legend()
+apply_margins(fig)
+save_figure(fig, output_path(4, "cooks-distance"))
+If you find influential observations, investigate them. Are they data-entry errors?
+Unusual but legitimate matches? Understanding these outliers can provide valuable
+insights.
+Model Selection: Choosing the Best Model
+When you have multiple models to choose from (e.g., linear versus Poisson versus
+negative binomial), how do you decide which is best? Several criteria can help:
+Akaike information criterion (AIC)
+Balances model fit with model complexity. A Lower AIC is better. It penalizes
+models with more parameters to avoid overfitting.
+Bayesian information criterion (BIC)
+Similar to AIC but with a stronger penalty for complexity. A Lower BIC is better.
+108 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 129
+================================================================================
+Cross-validation
+Split your data into training and test sets. Train the model on the training set and
+evaluate it on the test set. The model with the best test set performance is the
+winner.
+Here’s how to display the AIC and BIC for different models:
+# Compare AIC and BIC for different models
+print(
+    f"Poisson Model - AIC: {model.aic:.2f}, "
+    f"BIC: {model.bic:.2f}"
+)
+print(
+    "Negative Binomial Model - "
+    f"AIC: {nb_model.aic:.2f}, "
+    f"BIC: {nb_model.bic:.2f}"
+)
+AIC and BIC are useful for quick comparisons, but cross-validation is the gold
+standard for assessing a model’s predictive performance on new data.
+Practical Case Study: Predicting Match Outcomes
+Let’s bring everything together with a practical case study. We’ll use a realistic (though
+still simulated) dataset of soccer matches to predict the number of goals a team will
+score based on several features.
+Generating the Dataset
+Let’s first generate the dataset. It contains match-level data for a fictional league’s
+season:
+import pandas as pd
+import numpy as np
+# Generate a realistic soccer dataset
+np.random.seed(42)
+n_matches = 100
+match_data = pd.DataFrame(
+    {
+        "Team": [f"Team {i%10}" for i in range(n_matches)],
+        "ShotsOnTarget": np.random.poisson(5, n_matches),
+        "Possession": np.random.normal(50, 10, n_matches),
+        "Passes": np.random.poisson(300, n_matches),
+        "Fouls": np.random.poisson(12, n_matches),
+        "HomeAdvantage": np.random.choice([0, 1], n_matches),
+    }
+)
+# Generate goals with a realistic relationship
+match_data["Goals"] = np.random.poisson(
+    0.1 * match_data["ShotsOnTarget"]
+Practical Case Study: Predicting Match Outcomes 
+| 
+109
+
+
+================================================================================
+PAGE 130
+================================================================================
+    + 0.01 * match_data["Possession"]
+    + 0.5 * match_data["HomeAdvantage"]
+)
+print(match_data.head(10))
+print(f"\nDataset shape: {match_data.shape}")
+print(
+    f"Average goals per match: "
+    f"{match_data['Goals'].mean():.2f}"
+)
+print(
+    "Matches with zero goals: "
+    f"{(match_data['Goals'] == 0).sum()}"
+)
+Performing Exploratory Analysis
+Before building models, let’s explore the relationships among variables. We want to
+know which variables contribute to goal scoring. For this, a correlation heatmap is
+useful:
+import seaborn as sns
+from soccerml_figures.plotting import (
+    apply_margins,
+    create_figure,
+    output_path,
+    save_figure,
+)
+# Correlation heatmap
+fig, ax = create_figure()
+sns.heatmap(
+    match_data[
+        [
+            "Goals",
+            "ShotsOnTarget",
+            "Possession",
+            "Passes",
+            "Fouls",
+            "HomeAdvantage",
+        ]
+    ].corr(),
+    annot=True,
+    cmap="coolwarm",
+    center=0,
+    ax=ax,
+)
+ax.set_title("Feature Correlation Matrix")
+apply_margins(fig, left=0.12, right=0.94, bottom=0.2)
+save_figure(fig, output_path(4, "correlation-heatmap"))
+110 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 131
+================================================================================
+The correlation heatmap in Figure 4-8 shows which features are most strongly associ‐
+ated with goals. This tells us which features we should include in the model we build.
+Figure 4-8. Feature correlation matrix
+Next, we want to know the number of goals scored in a typical match. This will allow
+us to build our model around realistic values instead of guesswork. To do so, let’s plot
+a histogram that shows the number of matches with a certain goal count:
+# Distribution of goals
+fig, ax = create_figure()
+sns.countplot(x="Goals", data=match_data, ax=ax)
+ax.set_title("Distribution of Goals Scored")
+ax.set_xlabel("Number of Goals")
+ax.set_ylabel("Frequency")
+apply_margins(fig)
+save_figure(fig, output_path(4, "goals-distribution"))
+The distribution shown in Figure 4-9 reveals the pattern of goals scored. We can see
+that the numbers range from 0 to 5 and mostly are between 0 and 3. We can take
+away from this that building a model for more than 5 goals is futile and that the bulk
+of predictions should land between 0 and 3, as the data suggests.
+Practical Case Study: Predicting Match Outcomes 
+| 
+111
+
+
+================================================================================
+PAGE 132
+================================================================================
+Figure 4-9. Distribution of goals scored
+With this exploratory analysis done, we now have a sense of what our model should
+look like. Let’s start building one.
+Building and Comparing Models
+Rather than randomly choosing a model or relying on experience to build a nice one,
+the best practice is to build several models and compare their performance. Since
+we’re predicting integers, a Poisson or negative binomial distribution would make
+sense. We’ll use ShotsOnTarget, Possession, and HomeAdvantage as predictors, since
+these seemed highly correlated with goals scored.
+We will omit Fouls because this feature, while correlated, can be highly variable
+across players, matches, and leagues—making this model less scalable if we use it.
+We’ll also include a simple Poisson distribution with just one variable, ShotsOnTar
+get, to see how it does; the simpler the model, the better. Now, let’s build and
+compare the models:
+import statsmodels.formula.api as smf
+from sklearn.model_selection import train_test_split
+# Split data into training and test sets
+train_data, test_data = train_test_split(
+    match_data, test_size=0.2, random_state=42
+)  
+# Model 1: Simple Poisson with one predictor
+model1 = smf.poisson(
+    "Goals ~ ShotsOnTarget", data=train_data,
+).fit()
+# Model 2: Poisson with multiple predictors
+model2 = smf.poisson(
+    "Goals ~ ShotsOnTarget + Possession + HomeAdvantage",
+112 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 133
+================================================================================
+    data=train_data,
+).fit()
+# Model 3: Negative binomial with multiple predictors
+model3 = smf.negativebinomial(
+    "Goals ~ ShotsOnTarget + Possession + HomeAdvantage",
+    data=train_data,
+).fit()
+# Compare models
+print(
+    "Model 1 (Simple Poisson) "
+    "- AIC: {:.2f}, BIC: {:.2f}".format(
+        model1.aic, model1.bic
+    )
+)
+print(
+    "Model 2 (Multiple Poisson) "
+    "- AIC: {:.2f}, BIC: {:.2f}".format(
+        model2.aic, model2.bic
+    )
+)
+print(
+    "Model 3 (Negative Binomial) "
+    "- AIC: {:.2f}, BIC: {:.2f}".format(
+        model3.aic, model3.bic
+    )
+)
+Split the data 80/20 for training and testing. This is crucial for evaluating how
+well our model generalizes to new data.
+The output of this code will tell us the AIC and BIC values explained earlier. These
+will tell us which model has the best performance.
+Evaluating on Test Data
+Now, we cannot rely on AIC and BIC values from model training alone. The true test
+of a model is how well it performs on data it hasn’t seen. For this, we need to run it on
+the remaining 20% of data we put aside for this purpose, and we need to see what the
+model error looks like. Note that in this stage, error rate (MAE) is more important than
+AIC or BIC values, which we’ve already looked at. Let’s evaluate the test data now:
+from sklearn.metrics import (
+    mean_absolute_error,
+    mean_squared_error,
+)
+# Make predictions on test data
+test_data["pred_model1"] = model1.predict(test_data)
+test_data["pred_model2"] = model2.predict(test_data)
+test_data["pred_model3"] = model3.predict(test_data)
+# Calculate MAE for each model
+mae1 = mean_absolute_error(
+Practical Case Study: Predicting Match Outcomes 
+| 
+113
+
+
+================================================================================
+PAGE 134
+================================================================================
+    test_data["Goals"], test_data["pred_model1"]
+)
+mae2 = mean_absolute_error(
+    test_data["Goals"], test_data["pred_model2"]
+)
+mae3 = mean_absolute_error(
+    test_data["Goals"], test_data["pred_model3"]
+)
+print(f"Model 1 MAE: {mae1:.2f}")
+print(f"Model 2 MAE: {mae2:.2f}")
+print(f"Model 3 MAE: {mae3:.2f}")
+# Visualize predictions vs actual
+fig, axes = create_figure(nrows=1, ncols=3)
+for ax, (label, column) in zip(
+    axes,
+    [
+        ("Model 1: Simple Poisson", "pred_model1"),
+        ("Model 2: Multiple Poisson", "pred_model2"),
+        ("Model 3: Negative Binomial", "pred_model3"),
+    ],
+):
+    ax.scatter(test_data["Goals"], test_data[column], alpha=0.6)
+    ax.plot([0, 5], [0, 5], "r--")
+    ax.set_xlabel("Actual Goals")
+    ax.set_ylabel("Predicted Goals")
+    ax.set_title(label)
+apply_margins(fig, bottom=0.22, wspace=0.35)
+save_figure(fig, output_path(4, "model-predictions-comparison"))
+Before we look at the visual comparison, let’s examine the quantitative metrics
+(Table 4-1). We use the AIC and BIC to evaluate the models on the training data,
+and MAE to evaluate them on the test data.
+Table 4-1. Performance comparison across models
+Model
+AIC
+BIC
+Test MAE
+Model 1 (simple Poisson)
+237.06 241.82
+0.97
+Model 2 (multiple Poisson)
+228.19 237.72
+1.06
+Model 3 (negative binomial) 230.19 242.10
+1.06
+Figure 4-10 shows the result. Each dot is one match from the held-out test set. The
+dashed diagonal is the line of perfect prediction: a dot sitting exactly on it means the
+model predicted the right number of goals. Dots above the line indicate the model
+over-predicted; dots below it indicate under-prediction.
+Of the three panels, model 2 (multiple Poisson) sits closest to the diagonal on average,
+reflecting its lower AIC on the training data. Model 1 (simple Poisson) and model
+3 (negative binomial) show similar scatter, with model 1 edging ahead on test MAE
+(0.97 versus 1.06 for the other two). The tight clustering around the lower goal
+114 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 135
+================================================================================
+counts—most matches produce 0 to 2 goals—is consistent with the distribution in
+Figure 4-9, and is a reminder that all three models struggle most when a team has an
+unexpectedly high-scoring match.
+Figure 4-10. Comparing the models’ predictions
+Interpreting the Results
+Based on our analysis, we can draw several conclusions:
+Feature importance
+The correlation heatmap shows which features are most strongly associated with
+goals. Shots on target is by far the strongest predictor, which is typical.
+Model complexity
+Model 2 (multiple predictors) has a lower AIC (228.19) than model 1 (237.06),
+suggesting that the additional features improve the fit on the training data. How‐
+ever, the test MAE is slightly higher for model 2, indicating potential overfitting.
+Overdispersion
+Model 3 (negative binomial) has a higher AIC (230.19) than model 2 (228.19),
+suggesting that overdispersion might not be a significant issue in this specific
+dataset, and the simpler Poisson model is preferred.
+Prediction accuracy
+The scatterplots in Figure 4-10 show how well each model’s predictions align
+with actual goals. Points closer to the diagonal line indicate better predictions.
+While all models capture the general trend, considerable variance remains, high‐
+lighting the inherent unpredictability of soccer.
+Practical Case Study: Predicting Match Outcomes 
+| 
+115
+
+
+================================================================================
+PAGE 136
+================================================================================
+This case study demonstrates the complete workflow of a regression analysis in soc‐
+cer analytics: from data exploration to model building, comparison, and evaluation.
+It’s a process you’ll repeat many times as you tackle various prediction problems in
+the beautiful game.
+Feature Engineering for Better Predictions
+The quality of your predictions depends not just on the model you choose but on
+the features you feed into it. Feature engineering is the art and science of creating new
+features from existing data that help the model make better predictions. In soccer
+analytics, this is where domain knowledge meets data science.
+Interaction Features
+Sometimes the effect of one feature depends on the value of another. For example,
+shots on target might be more valuable when a team has high possession because the
+chances are likely to be better quality. We can capture this with an interaction feature:
+# Create an interaction feature
+match_data["ShotsXPossession"] = (
+    match_data["ShotsOnTarget"] * match_data["Possession"] / 100
+)  
+# Build a model with the interaction
+model_interaction = smf.poisson(
+    "Goals ~ ShotsOnTarget + Possession + ShotsXPossession",
+    data=match_data,
+).fit()
+print(model_interaction.summary())
+Divide by 100 to keep the scale reasonable, since possession is a percentage.
+Interaction features can significantly improve model performance when the relation‐
+ship between features and the target is not purely additive.
+The summary output for the interaction model reveals the coefficients in Table 4-2.
+Table 4-2. Interaction model coefficients
+Term
+Coefficient Std error
+z-value p > z
+Intercept
+–0.6489
+1.009
+–0.643
+0.520
+ShotsOnTarget
+0.1369
+0.181
+0.755
+0.450
+Possession
+0.0088
+0.020
+0.443
+0.658
+ShotsXPossession -0.0818
+0.351
+-0.233
+0.816
+Interaction features can significantly improve model performance when the relation‐
+ship between features and the target is not purely additive.
+116 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 137
+================================================================================
+Polynomial Features
+What if the relationship between a feature and the target is nonlinear? For example,
+perhaps the first few shots on target are very valuable, but after a certain point,
+additional shots have diminishing returns. We can capture this with polynomial
+features:
+# Create a squared feature
+match_data["ShotsOnTarget_Squared"] = (
+    match_data["ShotsOnTarget"] ** 2
+)
+# Build a model with the polynomial feature
+model_poly = smf.poisson(
+    "Goals ~ ShotsOnTarget + ShotsOnTarget_Squared",
+    data=match_data,
+).fit()
+print(model_poly.summary())
+The polynomial model yields the results in Table 4-3.
+Table 4-3. Polynomial model coefficients
+Term
+Coefficient Std error z-value
+p > z
+Intercept
+0.0736
+0.399
+0.184
+0.854
+ShotsOnTarget
+–0.0269
+0.148
+–0.182
+0.855
+ShotsOnTarget_Squared
+0.0105
+0.012
+0.871
+0.384
+A negative coefficient for the squared term suggests diminishing returns. A positive
+coefficient suggests accelerating returns.
+Categorical Features
+Not all features are numerical. What about categorical features like the team’s name
+or the competition? We can’t just plug Manchester United into a regression model. We
+need to encode these categories as numbers.
+The most common approach is one-hot encoding, where each category becomes its
+own binary (0/1) feature:
+# One-hot encode the team
+team_dummies = pd.get_dummies(
+    match_data["Team"], prefix="Team"
+)  
+match_data_encoded = pd.concat(
+    [match_data, team_dummies], axis=1
+)
+# Build a model with team as a feature
+model_team = smf.poisson(
+    "Goals ~ ShotsOnTarget + "
+Feature Engineering for Better Predictions 
+| 
+117
+
+
+================================================================================
+PAGE 138
+================================================================================
+    + " + ".join(team_dummies.columns),
+    data=match_data_encoded,
+).fit()
+print(model_team.summary())
+get_dummies() creates a new column for each unique team, with a 1 if that row is
+that team or 0 otherwise.
+The summary output will show a coefficient for each team (except one, which serves
+as the baseline). This allows the model to learn that some teams are inherently stron‐
+ger (score more goals on average) than others, even controlling for other features.
+Lagged Features
+In time-series data (like a season of matches), past performance can be a strong
+predictor of future performance. We can create lagged features that capture a team’s
+recent form:
+# Sort by team and date (assuming we have a date column)
+# match_data = match_data.sort_values(['Team', 'Date'])
+# Create a lagged feature: goals in the previous match
+match_data["Goals_Lag1"] = match_data.groupby("Team")[
+    "Goals"
+].shift(
+    1
+)  
+# Create a rolling average: average goals in the last 3 matches
+match_data["Goals_Rolling3"] = match_data.groupby("Team")[
+    "Goals"
+].transform(lambda x: x.rolling(window=3, min_periods=1).mean())
+# Build a model with lagged features
+model_lagged = smf.poisson(
+    "Goals ~ ShotsOnTarget + Goals_Lag1",
+    data=match_data.dropna(),
+).fit()
+print(model_lagged.summary())
+shift(1) moves the values down by one row, so each row gets the previous
+match’s value.
+Table 4-4 shows the lagged model results.
+Table 4-4. Lagged model coefficients
+Term
+Coefficient Std error
+z-value p > z
+Intercept
+–0.2847
+0.252
+–1.129
+0.259
+ShotsOnTarget 0.0940
+0.036
+2.645
+0.008
+Goals_Lag1
+0.0777
+0.073
+1.070
+0.284
+118 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 139
+================================================================================
+Lagged features are powerful but require careful handling to avoid data leakage, or
+accidentally using future information to predict the past.
+Domain-Specific Features
+Soccer has rich domain knowledge that can be translated into features:
+Expected goals (xG)
+If you have shot location data, you can calculate xG for each shot and sum them
+up.
+Defensive pressure
+Metrics like tackles, interceptions, and blocks can be combined into a defensive
+pressure index.
+Fatigue
+Days since the last match, or matches played in the last week.
+Motivation
+Derby matches, relegation battles, or title deciders might see different perfor‐
+mance levels.
+Here’s how to surface domain-specific features:
+# Example: Create a "high stakes" feature
+match_data["HighStakes"] = (
+    (match_data["Team"] == "Team 0")
+    & (match_data["HomeAdvantage"] == 1)
+).astype(int)
+# Build a model with the domain feature
+model_domain = smf.poisson(
+    "Goals ~ ShotsOnTarget + HighStakes", data=match_data
+).fit()
+print(model_domain.summary())
+The domain-specific model yields the results shown in Table 4-5.
+Table 4-5. Domain-specific model coefficients
+Term
+Coefficient Std error z-value p > z
+Intercept
+–0.1691
+0.209
+–0.807
+0.419
+ShotsOnTarget 0.0784
+0.036
+2.182
+0.029
+HighStakes
+0.6068
+0.298
+2.035
+0.042
+The best features often come from a deep understanding of the sport. This is where
+analysts who know soccer inside and out have a huge advantage.
+Feature Engineering for Better Predictions 
+| 
+119
+
+
+================================================================================
+PAGE 140
+================================================================================
+Common Pitfalls and Practical Tips
+As you build regression models for soccer analytics, you’ll encounter challenges. Here
+are common pitfalls to avoid, as well as some practical tips, learned from real-world
+experience.
+Pitfall 1: Overfitting to the Training Data
+The problem: Your model performs brilliantly on the training data (R2 = 0.99!) but
+terribly on new data. This is overfitting; the model has memorized the training data
+instead of learning general patterns.
+The solution: Always use a separate test set, or cross-validation. If your training per‐
+formance is much better than your test performance, you’re overfitting. Simplify your
+model by removing features, using regularization, or collecting more data. Here’s how
+to implement a cross-validation test:
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import PoissonRegressor
+# Use scikit-learn's Poisson regressor for cross-validation
+X = match_data[["ShotsOnTarget", "Possession", "HomeAdvantage"]]
+y = match_data["Goals"]
+model_sk = PoissonRegressor()
+cv_scores = cross_val_score(
+    model_sk, X, y, cv=5, scoring="neg_mean_absolute_error"
+)  
+print(
+    "Cross-validation MAE: "
+    f"{-cv_scores.mean():.2f} "
+    f"(+/- {cv_scores.std():.2f})"
+)
+We use five-fold cross-validation. The model is trained on four folds and tested
+on the fifth, repeated five times.
+For our dataset, the cross-validation MAE is 0.94 (+/– 0.15), providing a more robust
+estimate of out-of-sample performance.
+Pitfall 2: Ignoring Multicollinearity
+The problem: Two or more of your features are highly correlated with each other
+(e.g., shots and shots on target). This makes it hard to interpret coefficients and can
+make the model unstable.
+The solution: Check for multicollinearity by using the variance inflation factor
+(VIF). Remove or combine highly correlated features. Here’s how to check for
+multicollinearity:
+120 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 141
+================================================================================
+from statsmodels.stats.outliers_influence import (
+    variance_inflation_factor,
+)
+# Calculate VIF for each feature
+X_with_const = sm.add_constant(X)
+vif_data = pd.DataFrame()
+vif_data["Feature"] = X_with_const.columns
+vif_data["VIF"] = [
+    variance_inflation_factor(X_with_const.values, i)
+    for i in range(X_with_const.shape[1])
+]
+print(vif_data)
+Table 4-6 shows the VIF results for our features.
+Table 4-6. Variance inflation factors
+Feature
+VIF
+const
+31.65
+ShotsOnTarget 1.02
+Possession
+1.04
+HomeAdvantage 1.03
+A VIF greater than 10 is a red flag. Consider removing one of the correlated features.
+In our case, all feature VIFs are close to 1, indicating no multicollinearity issues.
+Pitfall 3: Using the Wrong Model for the Data
+The problem: You use a Poisson model when the data is overdispersed, or a linear
+model when the target is count data.
+The solution: Always check your assumptions. Plot the data, calculate the dispersion
+parameter, and look at residuals. Don’t be afraid to try multiple models and compare
+them.
+Pitfall 4: Forgetting About Data Quality
+The problem: Garbage in, garbage out. If your data has errors, missing values, or
+inconsistencies, your model will suffer.
+The solution: Spend time on data cleaning and validation. Check for outliers, missing
+values, and logical inconsistencies. A model is only as good as the data it’s trained on.
+Here’s how to check for outliers:
+# Check for missing values
+print(match_data.isnull().sum())
+# Check for outliers using the IQR method
+Q1 = match_data["Goals"].quantile(0.25)
+Common Pitfalls and Practical Tips 
+| 
+121
+
+
+================================================================================
+PAGE 142
+================================================================================
+Q3 = match_data["Goals"].quantile(0.75)
+IQR = Q3 - Q1
+outliers = match_data[
+    (match_data["Goals"] < Q1 - 1.5 * IQR)
+    | (match_data["Goals"] > Q3 + 1.5 * IQR)
+]
+print(f"Number of outliers: {len(outliers)}")
+In our simulated dataset, we found 0 outliers, but real-world data is rarely this clean.
+Tip 1: Start Simple, Then Add Complexity
+Don’t jump straight to a complex model with 20 features. Start with a simple model
+(one or two features) and gradually add complexity. This helps you understand what
+each feature contributes and makes debugging easier.
+Tip 2: Visualize, Visualize, Visualize
+Plots are your best friend. Scatterplots, residual plots, and distribution plots can
+reveal patterns and problems that summary statistics miss.
+Tip 3: Document Your Process
+Keep a notebook (paper or digital) of what you’ve tried, what worked, and what
+didn’t. This is invaluable when you need to explain your model to others or revisit it
+months later.
+Tip 4: Validate with Domain Experts
+If your model predicts that a team with 0 shots on target will score 3 goals, something
+is wrong. Always sanity-check your predictions with people who know soccer. They
+can spot nonsensical results that might slip past statistical tests.
+Looking Ahead: Where Regression Meets the Real World
+As we close this chapter on regression techniques, it’s worth taking a moment to look
+ahead. The models we’ve built here are powerful, but they’re just the beginning. In the
+real world of soccer analytics, you’ll encounter challenges and opportunities that go
+beyond what we’ve covered. Let’s explore some of these frontiers.
+From Regression to Classification
+In this chapter, we’ve focused on predicting numerical values: market values, goal
+counts, and so on. But many of the most important questions in soccer are binary:
+Will this team win or lose? Will this player be injured? Will this transfer be
+successful?
+122 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 143
+================================================================================
+These are classification problems, and they require different models. Logistic regres‐
+sion (which we touched on briefly in the context of zero inflation) is the most
+common starting point. It predicts the probability of a binary outcome. But many
+other classification algorithms exist: decision trees, random forests, support vector
+machines, and neural networks.
+The good news is that many of the principles you’ve learned in this chapter carry
+over. Feature engineering, model evaluation, and the importance of validation are
+just as crucial in classification as in regression. The main difference is in the metrics
+you use—accuracy, precision, recall, receiver operating characteristic (ROC) curves—
+and the interpretation of results. You will find deeper coverage of these topics in
+Chapter 5.
+Ensemble Methods: Combining Models
+We’ve compared individual models in this chapter, but what if we could combine
+them? Ensemble methods do exactly that. They build multiple models and aggregate
+their predictions, often achieving better performance than any single model.
+Random forests combine many decision trees. Gradient boosting builds trees sequen‐
+tially, each one correcting the errors of the previous. Stacking trains a meta-model on
+the predictions of other models. These techniques are powerful and widely used in
+practice.
+The downside is that ensemble methods are often less interpretable than simple
+regression models. A trade-off between accuracy and explainability occurs, and
+where you land on that trade-off depends on your goals. You will find more coverage
+of this big topic in Chapter 6.
+Deep Learning: The Frontier
+In recent years, deep learning has revolutionized many fields, from computer vision
+to natural language processing. In soccer analytics, deep learning is being used to
+analyze video data, predict player movements, and even generate tactical insights.
+Convolutional neural networks can identify players and track their positions from
+video. Recurrent neural networks can model the sequential nature of play. Trans‐
+former models can capture complex interactions between players.
+These models are data-hungry and computationally expensive, but they can uncover
+patterns that traditional methods miss. As more data becomes available (especially
+tracking and video data), deep learning will become increasingly important in soccer
+analytics. More on deep learning will follow in Chapter 7.
+Looking Ahead: Where Regression Meets the Real World 
+| 
+123
+
+
+================================================================================
+PAGE 144
+================================================================================
+Time Series and Sequential Data
+Soccer is inherently temporal. A season unfolds over months, a match over 90
+minutes, and a play over seconds. The models we’ve built in this chapter treat each
+observation as independent, but in reality, what happens in one match affects the
+next.
+Time-series models explicitly account for this temporal structure. They can capture
+trends (is a team improving over the season?), seasonality (do teams perform better
+at home in winter?), and autocorrelation (does a win in one match make a win in the
+next more likely?).
+Advanced time-series techniques like autoregressive integrated moving average
+(ARIMA), state-space models, and recurrent neural networks can model these
+dynamics. They’re essential for forecasting player performance, predicting league
+standings, and understanding momentum.
+That being said, such techniques require more sophistication and go beyond the
+scope of this book. You will see that you can accomplish a lot already with regression
+and classification techniques, as well as deep learning.
+Causal Inference: Beyond Prediction
+Regression models are great for prediction, but they’re not designed for causal
+inference. Just because shots on target are correlated with goals doesn’t mean that
+increasing shots on target will cause more goals. Confounding variables (e.g., team
+quality) could affect both.
+Causal inference techniques like randomized controlled trials, instrumental variables,
+and difference-in-differences can help you answer what if questions. What if we
+changed our formation? What if we signed this player? What if we implemented this
+training program?
+These techniques are more complex and require stronger assumptions, but they’re
+essential for making strategic decisions. In the coming chapters, we’ll explore some of
+these methods and how they apply to soccer.
+The Human Element
+Finally, it’s important to remember that soccer is a human game. Players have emo‐
+tions, motivations, and relationships that can’t be fully captured in data. Coaches have
+intuitions and experiences that go beyond what models can learn.
+In some ways, this is what this entire book is about: the best soccer analytics com‐
+bines quantitative models with qualitative insights. It uses data to inform decisions,
+not dictate them. It respects the expertise of coaches, scouts, and players while
+providing them with new tools and perspectives.
+124 
+| 
+Chapter 4: Regression Techniques for Soccer Analytics
+
+
+================================================================================
+PAGE 145
+================================================================================
+As you continue your journey in soccer analytics, always keep this balance in mind.
+Build rigorous models, but don’t forget the human element. Seek out data, but also
+seek out stories. Be precise, but also be humble. The beautiful game is too complex
+to be fully captured by any model, but with the right tools and the right mindset, you
+can get closer to understanding it than ever before.
+Conclusion
+This chapter has moved us from exploratory analysis into predictive modeling. We
+used linear regression for continuous outcomes, Poisson regression for count data,
+and KNN regression for similarity-based prediction, while also examining evaluation,
+diagnostics, and feature design.
+The larger lesson is that regression is most useful when it is paired with careful
+framing. A model is not just an equation. It is a claim about what is being predicted,
+which inputs matter, and how uncertainty should be interpreted. In soccer analytics,
+that means validating results, checking assumptions, and keeping domain context in
+view.
+In Chapter 5, we keep the same overall workflow but change the target. Instead of
+predicting how much, we will predict which class occurs: goal or no goal, win or draw
+or loss, and other categorical outcomes. That shift introduces a new family of models
+and evaluation metrics while building directly on the habits established here.
+Conclusion 
+| 
+125
+
+
+================================================================================
+PAGE 146
+================================================================================
+
+
+================================================================================
+PAGE 147
+================================================================================
+CHAPTER 5
+Predicting Soccer Outcomes
+with Classification
+In Chapter 4, we modeled numerical outcomes such as market value and goals
+scored. Many soccer questions, however, are not about magnitude but about cate‐
+gory: whether a shot becomes a goal, whether a pass is completed, or which result a
+match produces. That is the setting for classification.
+Classification keeps the same overall workflow as regression: define a target, choose
+features, train a model, and evaluate it carefully. What changes is the task itself.
+Instead of estimating a continuous value, we assign an observation to one of several
+discrete classes. Think about questions such as these:
+• Will this shot be a goal or not?
+•
+• Is this pass likely to be successful?
+•
+• Will the home team win, lose, or draw?
+•
+• What type of pass will a player attempt under pressure?
+•
+These are all classification problems. The answer is not a number on a sliding scale,
+but a label or a probability. That shift may sound small, but it changes the way models
+are interpreted as well as the way performance is measured. In soccer analytics,
+classification matters because many real decisions are ultimately categorical, even
+when uncertainty remains at the center.
+By the end of this chapter, you will be able to do the following:
+• Grasp the fundamental concepts of classification and its applications in soccer.
+•
+• Build, train, and interpret a logistic regression model to predict the likelihood of
+•
+a shot becoming a goal (the famous expected goals, or xG, model).
+127
+
+
+================================================================================
+PAGE 148
+================================================================================
+• Measure the success of your predictions with a suite of evaluation metrics like
+•
+confusion matrices, precision, recall, and receiver operating characteristic (ROC)
+curves.
+• Extend your skills to multiclass problems, such as predicting match outcomes
+•
+(win/draw/loss).
+• Implement k-nearest neighbors (KNN), an intuitive algorithm for finding similar
+•
+patterns in the data.
+• Complete a full case study by building a match outcome predictor from scratch.
+•
+We will use real-world StatsBomb data throughout the chapter. The aim is to build
+intuition for classification, show how common evaluation metrics fit together, and
+prepare for the more flexible tree-based methods in the next chapter.
+From Coin Flips to Goal Predictions:
+Understanding Classification
+At its heart, classification is about sorting. Imagine you have a bucket of soccer balls;
+some are size 5 (for adults), and some are size 4 (for youth). Your task is to pick one
+up and, without looking at the label, decide which size it is. You might feel its weight,
+its size, the texture of its panels. You are taking in features (weight, size, texture) to
+assign a class (size 4 or size 5). That’s classification.
+In soccer analytics, the principles are the same, but the stakes are higher and the data
+is more complex. We replace soccer balls with game events, and our intuition with
+powerful algorithms.
+Classification problems come in two main flavors, distinguished by a simple question:
+how many categories are we choosing from?
+Binary classification is a this or that problem, used when only two outcomes are
+possible. This is the most common type of classification, and it’s everywhere in
+soccer:
+• Goal or no goal? This is the basis for xG models.
+•
+• Pass completed or incomplete? Crucial for evaluating player passing ability.
+•
+• Successful tackle or failed tackle? Helps in assessing defensive skill.
+•
+In each case, the outcome is one of two mutually exclusive options.
+Multiclass classification, as the name suggests, sorts items into three or more cate‐
+gories. It’s used when the outcome isn’t a simple yes/no question:
+128 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 149
+================================================================================
+• Match outcome: win, draw, or loss? The classic prediction problem.
+•
+• Pass type: short pass, long ball, or cross? Understanding a player’s passing
+•
+choices.
+• Shot type: from open play, free kick, or penalty? Categorizing the origin of a
+•
+scoring opportunity.
+We will start our journey with binary classification, as it provides the clearest
+introduction to the core concepts. Once we’ve mastered that, we’ll move on to the
+multiclass challenges.
+Logistic Regression: Your First Classifier
+Now, let’s get our hands dirty with our first classification algorithm: logistic regression.
+Don’t let the regression in the name fool you; it is the workhorse of classification.
+It’s also popular for a reason: it’s powerful, interpretable, and provides a fantastic
+foundation for understanding more complex models.
+The Intuition: From Numbers to Probabilities
+Imagine you have a model that gives you a score for the likelihood of a shot becoming
+a goal. A shot from the halfway line might get a score of –10, while a tap-in from the
+six-yard box might get a +8. These scores are useful, but they aren’t probabilities. A
+probability must be a number from 0 to 1.
+This is where the magic of logistic regression comes in. It uses a mathematical
+function called the sigmoid function to squash any number, no matter how large or
+small, into a value from 0 to 1. Figure 5-1 shows what this looks like.
+Figure 5-1. The sigmoid function
+Logistic Regression: Your First Classifier 
+| 
+129
+
+
+================================================================================
+PAGE 150
+================================================================================
+As you can see, very negative scores get squashed close to 0, and very positive scores
+get squashed close to 1. A score of 0 gets mapped directly to a probability of 0.5. This
+elegant function allows the model to learn a relationship between the features of a
+shot and the ultimate probability of it being a goal.
+An important concept here is log odds, which are a way of expressing probability
+that transforms the familiar 0-to-1 scale into a scale from negative to positive infinity.
+Log odds are calculated by taking the natural logarithm of the odds, ln
+p
+1 −p , which
+makes it easy to model probabilities.
+In soccer terms, think of log odds as a confidence score for a team winning. If a
+match is a perfect toss-up (50/50), the log odds are 0. If a team is the heavy favorite
+(like 90%), the log odds are a positive number (like +2.2), reflecting that team’s
+advantage. If a team is the massive underdog (like 10%), the log odds are a negative
+number (like –2.2), mathematically capturing the unlikelihood of a win.
+Hands-On: Building an Expected Goals Model
+Let’s build a simple xG model. We’ll use real event data from one of the most iconic
+matches in recent history: the 2019 UEFA Champions League Final between Liver‐
+pool and Tottenham Hotspur. First, we need to fetch the data via the statsbombpy
+library:
+!pip install statsbombpy 
+from statsbombpy import sb
+import pandas as pd
+# Let's get the data for the 2019 Champions League Final
+# We need the competition_id=16 and season_id=4
+matches = sb.matches(competition_id=16, season_id=4)
+cl_final = matches[matches['match_id'] == 22912]
+# Now, let's get the event data for this match
+events = sb.events(match_id=22912)
+# Filter for just the shots
+shots = events[events['type'] == 'Shot'].copy() 
+Use !pip install to install the statsbombpy library.
+Use .copy() to avoid a SettingWithCopyWarning from pandas, as we will be
+modifying this DataFrame later.
+This code snippet fetches all events from the final and filters them down to just the
+shots. We now have a DataFrame containing every shot taken in the match, along
+with its outcome and some key features. This is the raw material for our xG model.
+Before we can train our model, we need to prepare our data. The shot_outcome
+column tells us what happened after the shot. We need to convert this into a simple
+130 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 151
+================================================================================
+binary target variable: was it a goal or not? We also need to extract our features from
+the location column. This is how we prepare our data and engineer our features:
+# Create binary target variable
+shots["goal"] = np.where(shots["shot_outcome"] == "Goal", 1, 0)
+# Extract x and y coordinates from location
+shots["x"] = shots["location"].apply(lambda loc: loc[0])
+shots["y"] = shots["location"].apply(lambda loc: loc[1])
+# Calculate distance to goal (center at 120, 40)
+shots["distance_to_goal"] = np.sqrt(
+    (120 - shots["x"]) ** 2 + (40 - shots["y"]) ** 2
+)
+# Calculate angle to goal (using trigonometry)
+goal_width = 7.32
+shots["angle_to_goal"] = np.arctan(
+    goal_width
+    * (120 - shots["x"])
+    / (
+        (120 - shots["x"]) ** 2
+        + (40 - shots["y"]) ** 2
+        - (goal_width / 2) ** 2
+    )
+)
+shots["angle_to_goal"] = np.degrees(shots["angle_to_goal"])
+print("Engineered features:")
+print(
+    shots[
+        ["x", "y", "distance_to_goal", "angle_to_goal", "goal",]
+    ].head(10)
+)
+We’ve now engineered two important features: the direct distance from the shot
+location to the center of the goal, and the angle to the goal. A larger angle means the
+shooter has a wider view of the goal, which intuitively should increase their chances
+of scoring. Now, we can finally train our logistic regression model:
+# Select features and target
+features = ["distance_to_goal", "angle_to_goal"]
+X = shots[features]
+y = shots["goal"]
+# Split into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.4, random_state=3
+)  
+print(f"Training set size: {len(X_train)}")
+print(f"Test set size: {len(X_test)}")
+print(f"\nFeature names: {features}")
+# Initialize and train the model
+log_reg = LogisticRegression()
+log_reg.fit(X_train, y_train)  
+# Print the coefficients
+Logistic Regression: Your First Classifier 
+| 
+131
+
+
+================================================================================
+PAGE 152
+================================================================================
+print(f"\nModel coefficients: {log_reg.coef_[0]}")
+print(f"Model intercept: {log_reg.intercept_[0]}")
+Splitting our data is crucial. We train the model on the _training set_ and then
+evaluate its performance on the unseen test set to get an honest assessment of
+how it would perform on new data.
+The .fit() method is where the model learns the relationship between our
+features (distance and angle) and the target (goal).
+Now that we’ve trained our model, let’s interpret what it has learned. The coefficients
+tell us the story of how each feature influences the probability of scoring.
+A negative coefficient for distance_to_goal means that as the distance increases,
+the log odds of scoring decrease. This makes perfect sense: the farther you are from
+the goal, the harder it is to score. Every additional meter of distance reduces your
+chances.
+A positive coefficient for angle_to_goal means that a wider angle increases the log
+odds of scoring. This matches with the soccer intuition, but note that the magnitude
+of the coefficient (0.002) is very small, which indicates that it doesn’t significantly
+affect the chance of scoring in this case.
+The intercept represents the baseline log odds when all features are 0. While this isn’t
+a realistic scenario in soccer, it’s part of the mathematical machinery that allows the
+model to make accurate predictions.
+This interpretability is one of logistic regression’s greatest strengths. Unlike an opaque
+model, we can explain exactly why the model predicts what it does. This is crucial
+when presenting findings to coaches or analysts who need to trust and understand
+the model’s recommendations. Here’s how we surface predictions to analyze what the
+model does:
+# Get predicted probabilities for test set
+y_pred_proba = log_reg.predict_proba(X_test)[:, 1]  
+# Get binary predictions (using 0.5 threshold)
+y_pred = log_reg.predict(X_test)  
+# Show some predictions
+results = pd.DataFrame(
+    {
+        "Distance": X_test["distance_to_goal"].values,
+        "Angle": X_test["angle_to_goal"].values,
+        "Actual": y_test.values,
+        "Predicted Probability": y_pred_proba,
+        "Predicted Class": y_pred,
+    }
+)
+print("Sample Predictions:")
+print(results.head(10).to_string(index=False))
+132 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 153
+================================================================================
+Use .predict_proba() to get the predicted probability for each class. We are
+interested in the probability of the positive class (Goal), which is the second
+column [:, 1].
+Here, 0.5 is used as a threshold to decide goal or no goal based on the predicted
+probability.
+Measuring Success: How Good Are Your Predictions?
+We’ve built a model, and it seems to make sense, but how do we know if it’s any good?
+In the world of classification, accuracy is only part of the story. We need a more
+sophisticated toolkit to truly understand our model’s performance. Let’s dive into the
+essential evaluation metrics.
+The Confusion Matrix: A Report Card for Your Model
+The most fundamental tool for evaluating a classifier is the confusion matrix. It’s a
+simple table that compares the model’s predictions to the actual outcomes. It shows
+you not just the number of wrong predictions but also how they were wrong.
+A confusion matrix has four key components:
+True positives (TP)
+The model predicted Goal, and it was a goal. (Correct prediction)
+True negatives (TN)
+The model predicted No Goal, and it was not a goal. (Correct prediction)
+False positives (FP)
+The model predicted Goal, but it was not a goal. (Type I error)
+False negatives (FN)
+The model predicted No Goal, but it was a goal. (Type II error)
+Let’s generate a confusion matrix for our xG model. We’ll keep using the shared
+plotting helper introduced in Chapter 3. Its implementation details are omitted for
+brevity. Here’s our code:
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+from soccerml_figures.plotting import (
+    apply_margins,
+    create_figure,
+    output_path,
+    save_figure,
+)
+# Calculate confusion matrix
+Measuring Success: How Good Are Your Predictions? 
+| 
+133
+
+
+================================================================================
+PAGE 154
+================================================================================
+cm = confusion_matrix(y_test, y_pred)  
+# Visualize
+fig, ax = create_figure()
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=["No Goal", "Goal"],
+    yticklabels=["No Goal", "Goal"],
+    ax=ax,
+)
+ax.set_ylabel("Actual")
+ax.set_xlabel("Predicted")
+ax.set_title("Confusion Matrix")
+apply_margins(fig)
+save_figure(fig, output_path(5, "confusion-matrix"))
+print("\nConfusion Matrix:")
+print(f"True Negatives (TN): {cm[0, 0]}")
+print(f"False Positives (FP): {cm[0, 1]}")
+print(f"False Negatives (FN): {cm[1, 0]}")
+print(f"True Positives (TP): {cm[1, 1]}")
+The confusion matrix compares actual outcomes (rows) against predicted out‐
+comes (columns).
+This produces the confusion matrix in Table 5-1.
+Table 5-1. Confusion matrix showing goals scored (or not scored), actual against predicted
+Predicted: No Goal Predicted: Goal
+Actual: No Goal 11 (TN)
+0 (FP)
+Actual: Goal
+1 (FN)
+0 (TP)
+The rows represent the actual outcomes, while the columns represent our model’s
+predictions. Let’s unpack what this table tells us:
+True negatives (TN = 11)
+The model correctly predicted No Goal 11 times. These are the shots that didn’t
+result in goals, and the model got them right.
+False positives (FP = 0)
+The model never incorrectly predicted a goal when there wasn’t one. This is
+excellent precision!
+134 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 155
+================================================================================
+False negatives (FN = 1)
+The model missed 1 actual goal, predicting No Goal when the shot actually went
+in. These are the errors we care most about in xG modeling.
+True positives (TP = 0)
+The model never predicted a goal that actually happened.
+This confusion matrix reveals an important insight: with the default threshold, our
+model is essentially predicting No Goal for everything. While this gives us high
+accuracy (11 out of 12 correct), it’s not very useful. We’ll learn how to fix this by
+adjusting the decision threshold later in the chapter.
+Precision and Recall: The Two Sides of Performance
+From the confusion matrix, we can derive two crucial metrics:
+Precision
+Of all the times the model predicted Goal, what percentage were goals? This
+metric measures the quality of the positive predictions.
+precision = TP / (TP + FP)
+Recall (or sensitivity)
+Of all the goals that happened, what percentage did the model correctly identify?
+This measures the model’s ability to find all the positive instances.
+recall = TP / (TP + FN)
+In soccer analytics, a trade-off often occurs between these two metrics, and which one
+you prioritize depends on your use case.
+Imagine you’re using the model to decide which shots to highlight in a post-match
+analysis video. If you want high precision, you’ll include only shots the model is very
+confident about. You won’t waste time on false alarms, but you might miss some
+surprising goals. This is a cautious approach: better safe than sorry.
+Now imagine you’re a defensive coach trying to identify all dangerous situations your
+team faced. Here, you want high recall. You’d rather review a few extra clips (false
+positives) than miss a single dangerous chance (false negative). This is an aggressive
+approach: better to be thorough.
+The key insight is that there’s no single best model. The right balance depends on the
+cost of different types of errors in your specific context. A good analyst understands
+this trade-off and tunes the model accordingly.
+Measuring Success: How Good Are Your Predictions? 
+| 
+135
+
+
+================================================================================
+PAGE 156
+================================================================================
+The ROC Curve: A Complete Performance Picture
+How do we balance this trade-off? The ROC curve is the perfect tool. It visualizes the
+performance of a classifier across all possible prediction thresholds. It plots the TP
+rate (recall) against the FP rate.
+The beauty of the ROC curve is that it doesn’t force you to pick a single threshold.
+Instead, it shows you the entire spectrum of possibilities. At one extreme, you could
+set the threshold so low that you predict Goal for every shot (100% recall, but also
+100% FP rate). At the other extreme, you could set it so high that you never predict
+Goal (0% recall, 0% FP rate). The ROC curve traces the path between these extremes.
+Here’s how to plot the ROC curve:
+from sklearn.metrics import roc_curve, roc_auc_score
+# Calculate ROC curve
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)  
+auc = roc_auc_score(y_test, y_pred_proba)  
+# Plot ROC curve
+fig, ax = create_figure()
+ax.plot(
+    fpr, tpr, linewidth=2, label=f"ROC Curve (AUC = {auc:.3f})",
+)
+ax.plot(
+    [0, 1],
+    [0, 1],
+    "k--",
+    linewidth=1,
+    label="Random Classifier",
+)  
+ax.set_xlabel("False Positive Rate")
+ax.set_ylabel("True Positive Rate (Recall)")
+ax.set_title("ROC Curve for xG Model")
+ax.legend(loc="lower right")
+ax.grid(True, alpha=0.3)
+apply_margins(fig)
+save_figure(fig, output_path(5, "roc-curve"))
+The roc_curve() function calculates the TP rate and FP rate at every possible
+threshold.
+The roc_auc_score() function summarizes the entire curve into a single num‐
+ber: the area under the curve (AUC).
+The diagonal dashed line (random classifier) represents a classifier that randomly
+assigns Goal or No Goal. It’s our baseline and has no prediction power.
+136 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 157
+================================================================================
+As shown in Figure 5-2, our xG model’s curve bows significantly toward the top-left
+corner, which is exactly what we want. This means that for most thresholds, we
+can achieve a high TP rate (catching most goals) without suffering too many FP
+(incorrectly predicting goals).
+Figure 5-2. ROC curve for xG model
+The AUC gives us a single number to summarize the model’s performance. An
+AUC of 1.0 would be perfect—the model never makes a mistake. An AUC of 0.5
+(the diagonal line) means the model is no better than random guessing. Our model
+achieves an AUC around 0.82, which is quite good for soccer prediction, where
+randomness and unpredictability are inherent to the game.
+Think of AUC as the probability that the model ranks a random positive example (an
+actual goal) higher than a random negative example (a nongoal). An AUC of 0.82
+means that if you pick one goal and one nongoal at random, there’s an 82% chance
+the model assigns a higher probability to the goal. This is a useful way to explain
+model performance to nontechnical stakeholders.
+Evaluation of Probabilistic Models with Cost Functions
+While the ROC curve helps us understand how well a model ranks probabilities, it
+does not tell us whether the probabilities themselves are accurate. Up to this point,
+we have largely relied on accuracy—the percentage of correct predictions. While
+accuracy is intuitive, it is often the wrong metric for soccer analytics, particularly
+when dealing with rare events like goals.
+If a model predicts that every single shot will not result in a goal, that model will
+be right about 90% of the time, achieving 90% accuracy. Yet, this model is entirely
+useless for evaluating finishing skill or chance quality. In soccer, we rarely want
+Measuring Success: How Good Are Your Predictions? 
+| 
+137
+
+
+================================================================================
+PAGE 158
+================================================================================
+a simple yes-or-no prediction. Instead, we want a probability: what is the exact
+likelihood that this specific shot, from this angle, under this pressure, will result in a
+goal?
+To evaluate how well a model estimates these probabilities, we use cost functions
+(also known as loss functions or evaluation metrics). A cost function measures the dif‐
+ference between the predicted probability and the actual outcome. The model’s goal
+during training is to minimize this cost. Two of the most important cost functions for
+probabilistic classification in soccer are log loss and the Brier score.
+Log loss (cross-entropy loss)
+Log loss heavily penalizes models for being both confident and wrong. If a model
+predicts a 99% chance of a goal, and the shot misses, the log loss will be extremely
+high. Conversely, if it predicts a 10% chance of a goal and the shot misses, the penalty
+is small.
+Log loss is the default cost function for many advanced algorithms, including logistic
+regression and the tree-based models we will build in the next chapter. Log loss
+forces the model to output well-calibrated probabilities rather than just pushing
+predictions toward 0 or 1. When you see eval_metric="logloss" in code, the model
+is being instructed to minimize this exact penalty. (You will also see this referred to as
+cross-entropy loss when we reach deep learning in Chapter 7).
+Brier score
+The Brier score is another common metric for probabilistic forecasts. It is simply the
+mean squared difference between the predicted probability (from 0 to 1) and the
+actual outcome (1 for an event happening, 0 for it not happening).
+A Brier score of 0 indicates perfect predictions, while a score of 1 indicates perfectly
+wrong predictions. Unlike log loss, which can grow infinitely large if a model is
+completely confident and wrong, the Brier score is bounded between 0 and 1. This
+makes it somewhat easier to interpret and compare across datasets.
+Calibration
+Both log loss and Brier score reward models for good calibration. A model is well
+calibrated if its predicted probabilities match the real-world frequencies. If an xG
+model assigns a 0.3 probability to 100 different shots, we expect exactly 30 of those
+shots to result in goals. If only 10 go in, the model is poorly calibrated, even if it
+correctly identified them as low-probability chances.
+When building models for xG, expected threat (xT), or pass completion probability,
+minimizing log loss or Brier score ensures that the outputs are true probabilities that
+coaches and analysts can trust, rather than just abstract scores.
+138 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 159
+================================================================================
+Beyond Binary: Multiclass Classification
+So far, we’ve focused on binary problems: goal or no goal, pass completed or not. But
+soccer is rarely that simple. Often we want to predict one outcome from a set of three
+or more possibilities. This is where multiclass classification comes in.
+Perhaps the most classic multiclass problem in soccer is predicting the outcome of a
+match. Will the home team win, will it be a draw, or will the away team win? This is a
+three-class problem.
+Logistic regression can be extended to handle multiclass problems with a technique
+called multinomial logistic regression (also known as softmax regression). Instead of
+predicting a single probability, the model predicts a probability for each possible
+class, and these probabilities sum to 1.
+Let’s consider an example using three features (shot distance, angle, and whether the
+shot came from a set piece) to predict whether a shot results in a goal, is saved, or is
+missed.
+This is a three-class outcome. The set-piece indicator is a binary variable: 1 for penal‐
+ties, free kicks, or corners, and 0 otherwise. To model this, we train a multinomial
+logistic regression model. Here is the main code (the complete code is available in the
+chapter’s folder in the book’s GitHub repository):
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+)
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+# Scale features
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+# Train multinomial logistic regression
+model = LogisticRegression(
+    solver="lbfgs",
+    max_iter=1000,
+    random_state=42,
+)
+model.fit(X_train_scaled, y_train)
+Beyond Binary: Multiclass Classification 
+| 
+139
+
+
+================================================================================
+PAGE 160
+================================================================================
+Now that we have trained the model, we can test its performance. Our classification
+report below will give precision, recall, and F1 score for each class. This is crucial for
+understanding how well the model performs for each possible outcome. The fitted
+model can be used for prediction under various shot scenarios.
+In our classification, we’ll consider three scenarios: First, a close-range effort from
+10 meters out at a decent 30-degree open-play shot. Second, a long-range speculative
+shot from 25 meters with a tight 15-degree angle. Third, a free kick from 12 meters
+with a nice 45-degree angle. Here’s how we build our report:
+# Test different shot scenarios
+test_shots = pd.DataFrame(
+    [
+        {
+            "distance": 10,
+            "angle": 30,
+            "is_set_piece": 0,
+        },  # Close range
+        {
+            "distance": 25,
+            "angle": 15,
+            "is_set_piece": 0,
+        },  # Long range
+        {
+            "distance": 12,
+            "angle": 45,
+            "is_set_piece": 1,
+        },  # Free kick
+    ]
+)
+test_scaled = scaler.transform(test_shots)
+predictions = model.predict(test_scaled)
+probabilities = model.predict_proba(test_scaled)
+print("\n" + "=" * 50)
+print("SAMPLE PREDICTIONS")
+print("=" * 50)
+for i, shot in test_shots.iterrows():
+    print(f"\nShot {i+1}:")
+    print(
+        f"  Distance: {shot['distance']}m, "
+        f"Angle: {shot['angle']}°, "
+        f"Set Piece: {bool(shot['is_set_piece'])}"
+    )
+    print(f"  Predicted: {predictions[i]}")
+    print(f"  Probabilities:")
+    for outcome, prob in zip(model.classes_, probabilities[i]):
+        print(f"    {outcome}: {prob:.3f}")
+140 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+

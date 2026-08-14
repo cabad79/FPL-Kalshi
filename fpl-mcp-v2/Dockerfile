@@ -11,6 +11,7 @@ WORKDIR /app
 # ─── Instalar dependencias primero (cache de capas) ──────────────────
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
+COPY run_alert_system.py ./
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .

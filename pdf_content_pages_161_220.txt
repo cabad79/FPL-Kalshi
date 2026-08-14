@@ -1,0 +1,2521 @@
+
+================================================================================
+PAGE 161
+================================================================================
+Table 5-2 shows the output of this data.
+Table 5-2. Predicted probabilities for three shot scenarios
+Outcome
+Probability shot 1 (close range) Probability shot 2 (long range) Probability shot 3 (free kick)
+Goal
+16.8%
+6.6%
+7.8%
+Miss
+34.5%
+47.5%
+25.8%
+Saved
+48.7%
+45.9%
+66.4%
+Note that, if you rerun this code, you might obtain slightly different numbers. The
+reason is that this dataset contains only 19 shots to classify, so the end result is highly
+sensitive to the split in training and testing data.
+In our case, for the close-range shot, the model predicts that a save is the most likely
+outcome at 48.7%, with a 34.5% chance of a miss and a 16.8% chance of a goal. For
+our speculative long-range shot, unsurprisingly, the model saw this as a likely miss,
+giving a miss a 47.5% chance and dropping the goal probability to just 6.6%. For our
+free kick, the model gives a massive 66.4% chance of a save, reflecting the tendency
+for goalkeepers to catch a free kick, while the goal probability sits at 7.8%.
+K-Nearest Neighbors: Finding Similar Situations
+While logistic regression is powerful, it makes assumptions about the relationship
+between features and outcomes (specifically, that it’s linear in the log-odds space).
+Sometimes you want an algorithm that makes fewer assumptions and instead learns
+directly from the data. Enter KNN.
+The Intuition: Birds of a Feather
+KNN is beautifully simple. To predict the class of a new data point, it looks at the k
+closest data points in the training set (the nearest neighbors) and takes a vote. If most
+of those neighbors are goals, the model predicts a goal. If most neighbors are not, the
+model predicts no goal.
+Imagine you’re trying to decide whether a shot will be a goal. You look at the five
+most similar shots in your historical data (similar distance, similar angle). If four out
+of those five were goals, you’d probably predict this one will be a goal too. That’s KNN
+in a nutshell.
+K-Nearest Neighbors: Finding Similar Situations 
+| 
+141
+
+
+================================================================================
+PAGE 162
+================================================================================
+The key parameter is k, the number of neighbors to consider. A small k (like 1
+or 3) makes the model very sensitive to individual data points, which can lead to
+overfitting. A large k (like 50 or 100) makes the model smoother but might miss
+important small-scale patterns. Choosing the right k is an art and a science.
+KNN commonly uses Euclidean distance, which measures the straight-line distance
+between two points in multidimensional feature space. However, this calculation
+becomes problematic when features have different units, such as comparing a player’s
+height in centimeters (ranging from 150–200) against their goals scored in single
+digits. Since Euclidean distance is sensitive to the magnitude of each feature, the
+height values would dominate the distance calculation simply because they are larger
+numbers. To prevent this, it is recommended to scale features (typically using stand‐
+ardization or min-max normalization) so that all variables contribute equally to the
+distance measurement and the algorithm can find truly meaningful neighbors.
+Hands-On: KNN for Shot Prediction
+Let’s apply KNN to our xG problem and compare it to logistic regression. This time
+we consider a bigger sample: 517 shots from 21 matches in the UEFA Champions
+League (UCL), English Premier League (EPL), and La Liga. The following code is
+used to fit the KNN model (the complete code is available in the chapter’s folder in
+the book’s GitHub repository):
+# First try KNN with K=5
+print("\n1. KNN with K=5:")
+knn_k5 = KNeighborsClassifier(n_neighbors=5)  
+knn_k5.fit(X_train_scaled, y_train)
+# Predictions for K=5
+knn_k5_pred = knn_k5.predict(X_test_scaled)
+knn_k5_pred_proba = knn_k5.predict_proba(X_test_scaled)[:, 1]
+Set n_neighbors=5, meaning the model will look at the five closest shots to make
+a prediction.
+Choosing the Right K
+How do we know whether k=5 is the best choice? We can try different values of k and
+see which one performs best on a validation set.
+A validation set is a portion of your dataset (separate from the training data) used to
+evaluate your model’s performance. You train on the training set, and then check how
+well the model performs on this unseen validation set to tune hyperparameters and
+prevent overfitting. Here’s how we run a KNN model on a validation set:
+142 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 163
+================================================================================
+# Define K values to test (5-50)
+k_values = range(5, 55, 5)
+cv_scores = []
+# Perform cross-validation for each K value
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    scores = cross_val_score(
+        knn, X_train_scaled, y_train, cv=5, scoring="roc_auc"
+    )  
+    cv_scores.append(scores.mean())
+    print(
+        f"K={k}: CV AUC-ROC = {scores.mean():.4f} "
+        f"(+/- {scores.std():.4f})"
+    )
+# Find best K
+best_k = k_values[np.argmax(cv_scores)]
+best_cv_score = max(cv_scores)
+print(f"\nBest K from cross-validation: {best_k}")
+print(f"Best CV AUC-ROC: {best_cv_score:.4f}")
+# Train KNN with best K
+knn_best = KNeighborsClassifier(n_neighbors=best_k)
+knn_best.fit(X_train_scaled, y_train)
+fig, ax = create_figure()
+ax.plot(k_values, cv_scores, marker="o", linewidth=2)
+ax.set_xlabel("K (Number of Neighbors)")
+ax.set_ylabel("Cross-Validated AUC")
+ax.set_title("KNN Performance vs. K Value")
+ax.grid(True, alpha=0.3)
+apply_margins(fig)
+save_figure(fig, output_path(5, "knn-k-comparison"))
+Use cross-validation to get a more robust estimate of performance. This popular
+technique systematically rotates which data is used for training and which for
+validation. Instead of using a single static validation set, we split the data into
+multiple folds, train the model multiple times using different folds as the valida‐
+tion set each time, and then average the results to get a more reliable estimate
+of the model’s performance. Here we can adopt five-fold cross-validation, which
+splits the data into five folds, and the model is trained and evaluated five times,
+each time using a different fold as the test set.
+Figure 5-3 shows how the model’s performance changes with different values of k.
+You can see the trade-off clearly in the low-k vs. high-k region: at k=7 or k=10, the
+model is erratic and unstable. As k increases to around 40, performance stabilizes and
+peaks.
+K-Nearest Neighbors: Finding Similar Situations 
+| 
+143
+
+
+================================================================================
+PAGE 164
+================================================================================
+Figure 5-3. KNN performance versus k value
+In theory, we’d expect performance to decline steadily as k gets too large and the
+model becomes over-smoothed. However, with our relatively small dataset of 255
+shots, the pattern is noisier; performance plateaus, rather than sharply declining at
+very high k values. This is typical when working with limited data. The bias-variance
+trade-off is still present, but the signal is less clean. The key lesson remains: there’s
+an optimal k that balances sensitivity to local patterns with robustness to noise, and
+cross-validation helps us find it.
+The bias-variance trade-off is the tension between a model’s simplicity and its flexi‐
+bility. High bias means the model oversimplifies, missing important patterns and
+leading to underfitting, while high variance means the model is too sensitive to
+training data, learning noise and causing overfitting. The goal is to find the balance
+where total error is minimized; that is, a model should be complex enough to capture
+true patterns but also simple enough to ignore random noise.
+Case Study: Building a Complete Match
+Outcome Predictor
+Now that you’ve learned the fundamentals of classification, let’s put it all together in a
+complete, end-to-end case study. We’re going to build a model that predicts whether a
+team will win, draw, or lose a match based on its in-game statistics.
+Step 1: Define the Problem
+Our goal is to predict the outcome of a soccer match (Home Win, Draw, or Away Win)
+by using statistics from the match itself. While this might seem like cheating (since
+we’re using data from the match to predict its outcome), this exercise is valuable.
+144 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 165
+================================================================================
+It helps us understand which in-game metrics are most predictive of success. In
+a real-world scenario, you might use historical averages of these metrics to make
+pre-match predictions.
+Step 2: Gather and Prepare the Data
+We’ll use StatsBomb data to extract key match statistics. For each match, we’ll calcu‐
+late metrics like total shots, shots on target, possession, passes completed, and more:
+from statsbombpy import sb
+import pandas as pd
+import numpy as np
+# Fetch Premier League matches
+matches = sb.matches(competition_id=2, season_id=44)
+# Initialize a list to store match features
+match_features = []
+for idx, match in matches.iterrows():
+    match_id = match["match_id"]
+    # Fetch events for this match
+    events = sb.events(match_id=match_id)
+    # Calculate features for home team
+    home_team = match["home_team"]
+    away_team = match["away_team"]
+    home_events = events[events["team"] == home_team]
+    away_events = events[events["team"] == away_team]
+    # Feature engineering
+    features = {
+        "match_id": match_id,
+        "home_shots": len(
+            home_events[home_events["type"] == "Shot"]
+        ),
+        "away_shots": len(
+            away_events[away_events["type"] == "Shot"]
+        ),
+        "home_passes": len(
+            home_events[home_events["type"] == "Pass"]
+        ),
+        "away_passes": len(
+            away_events[away_events["type"] == "Pass"]
+        ),
+        "home_tackles": len(
+            home_events[home_events["type"] == "Duel"]
+        ),
+        "away_tackles": len(
+            away_events[away_events["type"] == "Duel"]
+        ),
+        "outcome": (
+            "Home Win"
+            if match["home_score"] > match["away_score"]
+            else (
+                "Away Win"
+Case Study: Building a Complete Match Outcome Predictor 
+| 
+145
+
+
+================================================================================
+PAGE 166
+================================================================================
+                if match["home_score"] < match["away_score"]
+                else "Draw"
+            )
+        ),
+    }
+    match_features.append(features)
+# Convert to DataFrame
+match_df = pd.DataFrame(match_features)
+print(match_df.head())
+print(f"\nOutcome distribution:")
+print(match_df["outcome"].value_counts())
+This code loops through each match, extracts relevant events, and calculates our fea‐
+tures (passes, shots, and tackles). We’re creating a dataset where each row represents a
+match, and each column is either a feature or the outcome.
+Step 3: Train and Evaluate the Model
+Now we can train our multiclass classifier:
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+)
+import seaborn as sns
+import matplotlib.pyplot as plt
+# Prepare features and target
+feature_cols = [
+    "home_shots",
+    "away_shots",
+    "home_passes",
+    "away_passes",
+    "home_tackles",
+    "away_tackles",
+]
+X = match_df[feature_cols]
+y = match_df["outcome"]
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42
+)
+# Train the model
+clf = LogisticRegression(
+    multi_class="multinomial",
+    max_iter=1000,
+) 
+clf.fit(X_train, y_train)
+# Make predictions
+y_pred = clf.predict(X_test)
+# Evaluate
+146 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 167
+================================================================================
+print("Classification Report:")
+print(classification_report(y_test, y_pred))
+# Confusion matrix
+cm = confusion_matrix(
+    y_test,
+    y_pred,
+    labels=['Home Win', 'Draw', 'Away Win'],
+) 
+print(cm)
+Set max_iter=1000 to ensure that the model has enough iterations to converge,
+especially important for multiclass problems.
+The model predicts the most likely outcome (win, draw, or loss) for each match
+in the test set.
+This produces the confusion matrix in Table 5-3.
+Table 5-3. Confusion matrix of predicted versus actual match outcomes
+Predicted: win
+Predicted: draw
+Predicted: loss
+Actual: Win
+45
+12
+3
+Actual: Draw
+8
+28
+6
+Actual: Loss
+5
+10
+31
+Let’s interpret what this table tells us about our model’s performance. The rows repre‐
+sent what happened in the matches, while the columns show our model’s predictions.
+Note that the model gives a probability for each possible outcome (win, draw, or loss)
+and then uses the outcome with the highest probability as the prediction.
+Looking at the diagonal (top left to bottom right), we see the correct predictions:
+45 wins correctly predicted, 28 draws correctly predicted, and 31 losses correctly
+predicted. These are our successes. The model got 104 out of 148 predictions correct,
+giving us an accuracy of about 70%.
+But the off-diagonal cells reveal where the model struggles. The model predicted 12
+draws when the team won, and 10 draws when the team lost. This suggests the model
+is somewhat conservative, hedging toward the middle outcome when it’s uncertain.
+The model rarely confuses wins with losses (only 3 + 5 = 8 times), which is encourag‐
+ing. It’s making reasonable mistakes—confusing close outcomes rather than making
+wildly wrong predictions. A draw is closer to a win than a loss, so these errors are less
+costly than predicting a win when the team lost.
+Case Study: Building a Complete Match Outcome Predictor 
+| 
+147
+
+
+================================================================================
+PAGE 168
+================================================================================
+This pattern is typical in soccer match prediction. Draws are inherently difficult to
+predict because they often result from evenly matched teams and a single goal could
+break the ties. A model that can reliably distinguish wins from losses, even if it
+struggles with draws, is still quite useful for understanding team strength and making
+strategic decisions.
+Step 4: Interpret the Results
+The beauty of logistic regression is its interpretability. We can examine the coeffi‐
+cients to understand which features are most important:
+# Get feature importance
+feature_importance = pd.DataFrame(
+    {
+        "Feature": feature_cols,
+        "Home Win Coef": clf.coef_[0],
+        "Draw Coef": clf.coef_[1],
+        "Away Win Coef": clf.coef_[2],
+    }
+)
+print(feature_importance)
+A positive coefficient for Home Win means that an increase in that feature makes a
+home win more likely. For example, if home_shots has a large positive coefficient
+for Home Win, it confirms our intuition: more shots by the home team increase its
+chances of winning.
+Key Takeaways from the Case Study
+Through this case study, we’ve seen the complete workflow of a classification project:
+1. Problem definition: clearly state what you’re trying to predict.
+1.
+2. Data collection: gather relevant data from reliable sources.
+2.
+3. Feature engineering: transform raw data into meaningful features.
+3.
+4. Model training: choose an appropriate algorithm and train it.
+4.
+5. Evaluation: use multiple metrics to assess performance.
+5.
+6. Interpretation: understand what the model has learned.
+6.
+This workflow is your blueprint for tackling any classification problem in soccer
+analytics.
+148 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 169
+================================================================================
+Practical Tips and Common Pitfalls
+As you embark on your own classification projects, here are some hard-won lessons
+to keep in mind.
+Handling Imbalanced Data
+In soccer, many classification problems suffer from class imbalance. For example, in
+our xG model, only about 12% of shots result in goals. This means the model could
+achieve 88% accuracy by simply predicting No Goal every time, which is obviously
+useless.
+When dealing with imbalanced data, consider these strategies:
+Use appropriate metrics
+Don’t rely solely on accuracy. Focus on precision, recall, F1 score, and AUC,
+which give a more nuanced view of performance.
+Adjust class weights
+Many algorithms, including logistic regression in scikit-learn, allow you to set
+class_weight='balanced', which automatically adjusts for imbalance.
+Resample your data
+You can either oversample the minority class (create more copies of rare events)
+or undersample the majority class (remove some common events). Libraries like
+imbalanced-learn provide sophisticated resampling techniques.
+Change the decision threshold
+Instead of using 0.5 as the cutoff for predicting the positive class, experiment
+with different thresholds based on your specific needs.
+Selecting and Engineering Features
+The features you choose can make or break your model. Here are some tips:
+Start simple
+Begin with a few intuitive features. It’s easier to understand and debug a simple
+model.
+Use your domain knowledge
+Use your understanding of soccer to create meaningful features. Distance and
+angle to goal are obvious for xG, but what about the number of defenders
+between the shooter and the goal?
+Practical Tips and Common Pitfalls 
+| 
+149
+
+
+================================================================================
+PAGE 170
+================================================================================
+Avoid multicollinearity
+If two features are highly correlated (e.g., total passes and successful passes),
+they might confuse the model. Consider removing one or combining them. More
+details are provided in Chapter 6.
+Normalize your features
+Some algorithms (like KNN) are sensitive to the scale of features. If one feature
+ranges from 0 to 100 and another from 0 to 1, the first will dominate. Use
+standardization or normalization to put them on the same scale.
+Avoiding Overfitting
+As noted in Chapter 4, overfitting occurs when your model learns the training data
+too well, including its noise and peculiarities, and fails to generalize to new data. It’s
+like a student who memorizes the practice exam but can’t handle new questions.
+To avoid overfitting:
+Use a validation set
+Always split your data into training, validation, and test sets. Train on the
+training set, tune hyperparameters on the validation set, and evaluate only final
+performance on the test set.
+Cross-validation
+Use k-fold cross-validation to get a more robust estimate of your model’s perfor‐
+mance.
+Regularization
+Techniques like L1 and L2 regularization penalize overly complex models. More
+details are given in Chapter 6.
+Keep it simple
+A model with fewer features is less likely to overfit. Use feature selection tech‐
+niques to identify the most important predictors.
+A hyperparameter is like a setting on a machine learning model that
+you have to turn before the model starts learning; an example is the
+k in KNN.
+150 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 171
+================================================================================
+Choosing When to Use Which Algorithm
+You now have two classification algorithms in your toolkit: logistic regression and
+KNN. When should you use each?
+Logistic regression
+Use when you want interpretability, when you believe the relationship between
+features and outcome is roughly linear (in log-odds space), and when you have
+a moderate to large dataset. This algorithm is fast, reliable, and a great starting
+point.
+KNN
+Use when the decision boundary is complex and nonlinear, when you have a
+small to medium dataset, and when you don’t need to understand why the model
+makes its predictions. Be aware that KNN can be slow with large datasets because
+it needs to calculate distances to all training points.
+As a general rule, start with logistic regression. If it doesn’t perform well, explore
+more complex algorithms like KNN, decision trees, or neural networks (which we’ll
+cover in later chapters).
+Tuning the Decision Threshold: Finding the Sweet Spot
+So far, we’ve been using 0.5 as the threshold for converting probabilities to class
+predictions. If the model predicts a probability greater than 0.5, we classify it as a
+goal; otherwise, it’s not a goal. But who says 0.5 is the right threshold? Depending on
+your specific needs, you might want to adjust this threshold to optimize for different
+outcomes.
+Understanding the Threshold Trade-Off
+Changing the threshold shifts the balance between precision and recall. A lower
+threshold (say, 0.3) makes the model more aggressive: it will predict Goal more often,
+increasing recall (catching more actual goals) but decreasing precision (more false
+alarms). A higher threshold (say, 0.7) makes the model more conservative: it will
+predict Goal only when very confident, increasing precision but decreasing recall.
+Think of this trade-off like a referee deciding whether to award a penalty. A lenient
+referee (low threshold) will award more penalties, catching more legitimate fouls but
+also making more mistakes. A strict referee (high threshold) will award penalties only
+for clear fouls, making fewer mistakes but also missing some legitimate calls.
+Tuning the Decision Threshold: Finding the Sweet Spot 
+| 
+151
+
+
+================================================================================
+PAGE 172
+================================================================================
+Finding the Optimal Threshold
+Let’s explore how different thresholds affect our xG model’s performance:
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    f1_score,
+    precision_score,
+    recall_score,
+)
+import numpy as np
+# Train model and get probabilities
+log_reg = LogisticRegression()
+log_reg.fit(X_train, y_train)
+y_pred_proba = log_reg.predict_proba(X_test)[:, 1]
+# Try different thresholds
+thresholds = np.arange(0.1, 0.9, 0.05)  
+precisions = []
+recalls = []
+f1_scores = []
+for threshold in thresholds:
+    y_pred = (y_pred_proba >= threshold).astype(int)  
+    precisions.append(
+        precision_score(y_test, y_pred, zero_division=0,)
+    )
+    recalls.append(
+        recall_score(y_test, y_pred, zero_division=0,)
+    )
+    f1_scores.append(f1_score(y_test, y_pred, zero_division=0))
+fig, ax = create_figure()
+ax.plot(thresholds, precisions, linewidth=2, label="Precision")
+ax.plot(thresholds, recalls, linewidth=2, label="Recall")
+ax.plot(thresholds, f1_scores, linewidth=2, label="F1 Score")
+ax.set_xlabel("Decision Threshold")
+ax.set_ylabel("Score")
+ax.set_title(
+    "Impact of Decision Threshold " "on Model Performance"
+)
+ax.set_ylim(0, 1.05)
+ax.grid(True, alpha=0.3)
+ax.legend(loc="best")
+apply_margins(fig)
+save_figure(fig, output_path(5, "threshold-tuning"))
+Test a range of thresholds from 0.1 to 0.9 in steps of 0.05.
+For each threshold, convert probabilities to binary predictions and calculate
+metrics.
+As shown in Figure 5-4, you can see the classic precision-recall trade-off. The F1
+score, which balances both metrics, can help you identify the optimal threshold. In
+152 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 173
+================================================================================
+this case, you might find that a threshold of around 0.3 or 0.4 maximizes the F1 score,
+suggesting that the default 0.5 threshold isn’t actually optimal for this problem.
+Figure 5-4. Impact of decision threshold on model performance
+Deciding When to Adjust the Threshold
+In practice, the right threshold depends on the cost of different types of errors:
+High recall priority
+If missing a goal prediction is very costly (e.g., you’re trying to identify all
+dangerous attacking situations for defensive analysis), use a lower threshold.
+You’ll catch more goals, even if you have more false alarms.
+High precision priority
+If false goal predictions are costly (e.g., you’re using the model to decide whether
+to take a shot or pass, and taking a low-probability shot is wasteful), use a higher
+threshold. You’ll predict goals only when very confident.
+Balanced approach
+If both types of errors are equally important, use the threshold that maximizes
+the F1 score.
+For our xG model, a balanced approach is usually best, as we want an accurate overall
+assessment of scoring chances.
+Comparing Models: Which Classifier Is Best?
+Now that you’ve built multiple classifiers, a natural question arises: which one should
+you use? The answer depends on your specific problem, your data, and your priori‐
+ties. Let’s explore how to compare models systematically.
+Comparing Models: Which Classifier Is Best? 
+| 
+153
+
+
+================================================================================
+PAGE 174
+================================================================================
+The Model Comparison Framework
+When comparing classification models, consider these dimensions:
+Performance
+Which model has the highest accuracy, AUC, or F1 score?
+Interpretability
+Can you explain why the model makes its predictions?
+Speed
+How long does it take to train and make predictions?
+Robustness
+How well does it handle noisy or incomplete data?
+Scalability
+Can it handle large datasets?
+Rarely will one model dominate on all dimensions. You’ll need to make trade-offs
+based on your priorities. For example, if you’re building a model to inform coaching
+decisions, interpretability might be more important than squeezing out an extra 1%
+of accuracy.
+Hands-On: Model Comparison for xG
+Let’s compare our logistic regression and KNN models for the xG problem across
+multiple metrics:
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import StandardScaler
+import time
+# Initialize and compare models
+(
+    split_X_train,
+    split_X_test,
+    split_y_train,
+    split_y_test,
+) = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y,
+)
+scaler = StandardScaler()
+scaled_train = scaler.fit_transform(split_X_train)
+scaled_test = scaler.transform(split_X_test)
+models = {
+    "Logistic Regression": LogisticRegression(),
+    "KNN (k=5)": KNeighborsClassifier(n_neighbors=5),
+    "KNN (k=15)": KNeighborsClassifier(n_neighbors=15),
+154 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 175
+================================================================================
+    "KNN (k=30)": KNeighborsClassifier(n_neighbors=30),
+}
+model_names = []
+auc_scores = []
+for name, model in models.items():
+    if name == "Logistic Regression":
+        model.fit(split_X_train, split_y_train)  
+        y_pred_proba = model.predict_proba(split_X_test)[:, 1]
+    else:
+        model.fit(scaled_train, split_y_train)
+        y_pred_proba = model.predict_proba(scaled_test)[:, 1]
+    model_names.append(name)
+    auc_scores.append(roc_auc_score(split_y_test, y_pred_proba))
+Train each model on the same training data and evaluate on the same test data to
+ensure a fair comparison.
+This code produces the comparison in Table 5-3.
+Model
+Accuracy Precision
+Recall F1
+AUC
+Train (s) Predict (s)
+Logistic regression 0.896
+0.000
+0.000
+0.000 0.777
+0.0054
+0.0017
+KNN (k=5)
+0.896
+0.000
+0.000
+0.000 0.698
+0.0016
+0.0033
+KNN (k=15)
+0.896
+0.000
+0.000
+0.000 0.765
+0.0013
+0.0035
+KNN (k=30)
+0.896
+0.000
+0.000
+0.000 0.726
+0.0014
+0.0036
+The table reveals some interesting insights. All models achieve the same accuracy
+(89.6%), which is actually the baseline accuracy of always predicting No Goal (since
+only about 10% of shots result in goals). However, the AUC scores tell a different
+story. Logistic regression achieves the highest AUC (0.777), suggesting it’s better at
+ranking shots by their goal probability. KNN models vary in performance depending
+on k, with k=15 performing best among the KNN variants. Logistic regression is also
+slightly slower to train but faster at prediction, making it the better choice for this
+problem.
+Visualization of Model Performance
+Numbers are great, but visualizations can make comparisons even clearer. Let’s create
+a bar chart comparing the AUC scores of our models:
+# Create bar chart of AUC scores
+fig, ax = create_figure()
+ax.bar(
+    model_names,
+    auc_scores,
+    alpha=0.75,
+    color=["#4C78A8", "#F58518", "#54A24B", "#E45756"],
+)
+Comparing Models: Which Classifier Is Best? 
+| 
+155
+
+
+================================================================================
+PAGE 176
+================================================================================
+ax.set_ylabel("AUC Score")
+ax.set_title("Model Comparison: AUC Scores")
+ax.set_ylim(0.5, 1.0)  
+ax.tick_params(axis="x", rotation=15)
+ax.grid(True, alpha=0.25, axis="y")
+apply_margins(fig, bottom=0.28)
+save_figure(fig, output_path(5, "model-comparison-auc"))
+AUC ranges from 0.5 (random guessing) to 1.0 (perfect classifier).
+As shown in Figure 5-5, you can quickly see which model performs best. This kind
+of visualization is invaluable when presenting your findings to coaches, analysts, or
+stakeholders who may not be familiar with the technical details.
+Figure 5-5. Comparing models’ AUC scores
+Advanced Topics: Going Deeper
+Now that you have a solid foundation in classification, let’s explore some advanced
+topics that will take your skills to the next level. In this section, we’re handling
+primarily data-related topics; additional algorithms for classification such as extreme
+gradient boosting (XGBoost) and random forests are addressed in Chapter 6.
+Scaling and Normalizing Features
+We briefly mentioned feature scaling earlier, but it’s worth diving deeper. Many
+machine learning algorithms, including KNN and logistic regression with regulariza‐
+tion, are sensitive to the scale of features. If one feature ranges from 0 to 100 (like
+distance in meters) and another from 0 to 1 (like a normalized angle), the larger-scale
+feature will dominate the model’s decisions.
+156 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 177
+================================================================================
+Scaling has two common approaches:
+Standardization (Z-score normalization)
+Transforms features to have a mean of 0 and a standard deviation of 1. This is
+useful when features follow a roughly normal distribution.
+Min-max scaling
+Transforms features to a fixed range, typically [0, 1]. This is useful when you
+want all features on the same scale but want to preserve the original distribution
+shape.
+Let’s see how scaling affects our KNN model:
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import roc_auc_score
+import pandas as pd
+# Load data
+shots = pd.read_csv(
+    "shots_data_large.csv"
+)  # Update path as needed
+X = shots[["distance_to_goal", "angle_to_goal"]]
+y = shots["goal"]
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42
+)
+# Train KNN without scaling
+knn_no_scale = KNeighborsClassifier(n_neighbors=5)
+knn_no_scale.fit(X_train, y_train)
+y_pred_proba_no_scale = knn_no_scale.predict_proba(X_test)[:, 1]
+auc_no_scale = roc_auc_score(y_test, y_pred_proba_no_scale)
+# Train KNN with scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)  
+X_test_scaled = scaler.transform(X_test)  
+knn_scaled = KNeighborsClassifier(n_neighbors=5)
+knn_scaled.fit(X_train_scaled, y_train)
+y_pred_proba_scaled = knn_scaled.predict_proba(X_test_scaled)[
+    :, 1
+]
+auc_scaled = roc_auc_score(y_test, y_pred_proba_scaled)
+print(f"KNN without scaling - AUC: {auc_no_scale:.3f}")
+print(f"KNN with scaling - AUC: {auc_scaled:.3f}")
+print(f"Improvement: {(auc_scaled - auc_no_scale) * 100:.1f}%")
+Fit the scaler on the training data and transform it. This learns the mean and
+standard deviation from the training set.
+Advanced Topics: Going Deeper 
+| 
+157
+
+
+================================================================================
+PAGE 178
+================================================================================
+Transform the test data via the same scaler (fitted on training data). Never fit the
+scaler on test data, as that would leak information.
+You’ll likely see that scaling improves the KNN model’s performance, sometimes sig‐
+nificantly. This is because KNN relies on distance calculations, and unscaled features
+can distort these distances.
+Handling Missing Data
+In real-world soccer data, you’ll often encounter missing values. A player’s position
+might not be recorded for every event, or a shot’s technique might be unknown. The
+way you handle missing data can significantly impact your model’s performance.
+Here are common strategies:
+Remove rows with missing values
+Simple but wasteful. Use this approach only if you have plenty of data and few
+missing values.
+Impute with mean/median
+Replace missing values with the feature’s mean (for continuous variables) or
+median (for skewed distributions).
+Impute with mode
+Replace missing values with the most common value (for categorical variables).
+Use predictive imputation
+Use a model to predict missing values based on other features. This option is
+more sophisticated but can be powerful.
+Create a missing indicator
+Add a binary feature that flags whether a value was missing. This can help the
+model learn patterns in missingness.
+Let’s implement simple mean imputation:
+from sklearn.impute import SimpleImputer
+import numpy as np
+# Simulate some missing data
+X_with_missing = X.copy()
+missing_mask = np.random.rand(*X.shape) < 0.1  # 10% missing
+X_with_missing[missing_mask] = np.nan
+print(f"Missing values: {X_with_missing.isnull().sum().sum()}")
+# Impute missing values with mean
+imputer = SimpleImputer(strategy="mean")  
+X_imputed = imputer.fit_transform(X_with_missing)
+remaining_missing = (
+    pd.DataFrame(X_imputed).isnull().sum().sum()
+)
+158 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 179
+================================================================================
+print(
+    f"After imputation: {remaining_missing}"
+)
+SimpleImputer from scikit-learn makes imputation easy. You can choose strate‐
+gies like mean, median, most_frequent, or constant.
+Combining Classifiers with Ensemble Methods
+Sometimes the best model is not a single classifier but a combination of multiple
+classifiers. This is called an ensemble approach. The idea is simple: if you have
+multiple experts with different perspectives, their combined judgment is often better
+than any single expert.
+One simple ensemble technique is voting:
+from sklearn.ensemble import VotingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+# Create individual classifiers
+log_reg = LogisticRegression()
+knn = KNeighborsClassifier(n_neighbors=5)
+decision_tree = DecisionTreeClassifier(
+    max_depth=5, random_state=42
+)
+# Create a voting ensemble
+voting_clf = VotingClassifier(
+    estimators=[
+        ("lr", log_reg),
+        ("knn", knn),
+        ("dt", decision_tree),
+    ],
+    voting="soft",  
+)
+# Train and evaluate
+voting_clf.fit(X_train, y_train)
+y_pred_proba_ensemble = voting_clf.predict_proba(X_test)[:, 1]
+auc_ensemble = roc_auc_score(y_test, y_pred_proba_ensemble)
+print(f"Ensemble AUC: {auc_ensemble:.3f}")
+soft voting uses predicted probabilities and averages them. hard voting uses
+class predictions and takes the majority vote.
+Ensemble methods often provide a small but meaningful boost in performance.
+They’re especially useful when you have multiple models with different strengths and
+weaknesses.
+Advanced Topics: Going Deeper 
+| 
+159
+
+
+================================================================================
+PAGE 180
+================================================================================
+Real-World Considerations
+Building a classification model in a Jupyter notebook is one thing; deploying it in the
+real world is another. Here are some practical considerations to keep in mind.
+Data Quality and Availability
+Your model is only as good as your data. In professional soccer analytics, you might
+have access to high-quality tracking data with precise player positions. But if you’re
+working with a lower-league team or analyzing historical matches, you might be
+limited to basic event data or even manually collected statistics.
+Always assess your data quality before building a model. Are there missing values?
+Are the measurements accurate? Is the data representative of the scenarios you
+want to predict? A simple model trained on high-quality data will almost always
+outperform a complex model trained on noisy, incomplete data.
+Model Maintenance and Updates
+Soccer is a dynamic sport. Tactics evolve, players improve or decline, and rules
+change. A model trained on data from five years ago might not perform well on
+today’s game. Plan for regular model updates and retraining.
+Set up a monitoring system to track your model’s performance over time. If you
+notice the accuracy or AUC dropping, it’s a sign that the model needs to be retrained
+with more recent data.
+Ethical Considerations
+As you build predictive models, remember that they can have real-world con‐
+sequences. A model that predicts player performance might influence transfer
+decisions, affecting players’ careers and livelihoods. A model that predicts match
+outcomes might be used for betting, raising ethical and legal concerns.
+Always consider the potential impact of your models. Be transparent about their
+limitations, avoid making claims of certainty, and ensure that your work is used
+responsibly.
+Looking Ahead: From Linear Boundaries to Decision Trees
+In this chapter, we established the core classification workflow with logistic regression
+and KNNs. These models are valuable starting points because they provide a solid
+foundation for understanding probabilities, decision boundaries, and evaluation met‐
+rics like precision, recall, and the ROC curve. However, they also impose constraints.
+Logistic regression assumes a linear relationship between the features and the log
+160 
+| 
+Chapter 5: Predicting Soccer Outcomes with Classification
+
+
+================================================================================
+PAGE 181
+================================================================================
+odds of the outcome, which means it draws a straight line (or a flat plane) to separate
+goals from misses. While this model is effective for simple relationships, soccer is
+rarely that straightforward. KNN makes no such linearity assumption, but it struggles
+as the number of features grows. In high-dimensional spaces, the notion of “nearest”
+becomes unreliable, and the model can become slow and sensitive to irrelevant or
+redundant features.
+To capture these nuances without manually engineering every possible interaction,
+we need models that can learn nonlinear patterns and threshold effects naturally.
+In Chapter 6, we will introduce tree-based models to address this exact challenge.
+We will start with the intuitive classification tree, which learns a flowchart-like
+sequence of if-then rules that mimic a coach’s tactical reasoning. From there, we
+will explore how combining multiple trees into a random forest can dramatically
+improve stability and predictive accuracy. Finally, we will introduce XGBoost, a
+powerful gradient-boosting algorithm that learns sequentially from its mistakes, and
+use Shapley additive explanations (SHAP) analysis to peek inside the opaque box
+and understand exactly how each feature influences a prediction. These advanced
+methods will significantly expand our ability to model the complex realities of the
+pitch.
+Conclusion
+This chapter extended our predictive workflow from numerical targets to categorical
+ones. We used logistic regression to model shot outcomes, examined confusion
+matrices, precision, recall, and ROC curves, and built both multiclass and KNN
+classifiers.
+Just as in regression, the main lesson is not only how to fit a model but also how
+to evaluate it in context. A classifier can look strong on one metric and weak on
+another. In soccer, that matters because the relevant trade-off depends on the task: an
+xG model, a pass-completion model, and a match-outcome model do not all fail in
+the same way.
+In Chapter 6, we stay with classification but move to tree-based methods. Those
+models handle nonlinear relationships and feature interactions more naturally, giving
+us a more flexible way to model the kinds of patterns that appear constantly in soccer
+data.
+Conclusion 
+| 
+161
+
+
+================================================================================
+PAGE 182
+================================================================================
+
+
+================================================================================
+PAGE 183
+================================================================================
+CHAPTER 6
+Advanced Classification Methods
+In Chapter 5, we used logistic regression and k-nearest neighbors (KNN) to build the
+core classification workflow. Those models are valuable starting points, but they also
+impose constraints. Logistic regression is linear in its decision boundary, and KNN
+can become unstable or hard to scale as feature spaces grow.
+This chapter introduces tree-based models as a more flexible extension of that work.
+Decision trees, random forests, and gradient-boosting methods can represent nonlin‐
+ear relationships, interactions, and threshold effects that arise naturally in soccer data.
+That flexibility is especially useful in soccer analytics, where performance often
+depends on combinations of context: distance and angle together, pressure and
+location together, possession state and game situation together. Tree-based models
+can capture those structures without requiring us to write every interaction by hand.
+At the same time, tree-based models preserve an important link to interpretation. A
+single tree can be read as a sequence of soccer-style rules, while feature importance and
+Shapley additive explanations (SHAP) analysis help explain more complex ensembles.
+By the end of this chapter, you will be able to do the following:
+• Understand how decision trees learn hierarchical rules from soccer data.
+•
+• Build, visualize, and interpret a classification tree model.
+•
+• Construct a random forest ensemble to improve predictive accuracy and stability.
+•
+• Identify when to use a simple tree versus a forest for different analytical tasks.
+•
+• Tune hyperparameters to avoid overfitting and optimize performance.
+•
+• Build and tune extreme gradient boosting (XGBoost) models for various soccer
+•
+prediction tasks.
+163
+
+
+================================================================================
+PAGE 184
+================================================================================
+The Classification Tree: Soccer’s Decision Flowchart
+Imagine you are a coach analyzing a missed scoring chance. Your thought process
+isn’t a single calculation; it’s a flowchart of questions. Was the shooter under pressure?
+Was the shot taken on their preferred foot? Was the angle too narrow? Each answer
+leads to another question until you reach a conclusion: That should have been a goal.
+A classification tree formalizes this exact process.
+The Intuition: Learning the If-Then Rules of Soccer
+A classification tree is a supervised learning algorithm that partitions the feature space
+into rectangular regions, making a prediction based on the majority class in each
+region. Think of it as playing 20 questions with your data. To classify a shot as a goal
+or no-goal, the tree might ask these questions:
+1. Is the shot distance less than 18 meters? If yes, go to question 2; if no, predict No
+1.
+Goal.
+2. Is the shot angle greater than 20 degrees? If yes, go to question 3; if no, predict No
+2.
+Goal.
+3. Was it a first-time shot? If yes, predict Goal; if no, predict No Goal.
+3.
+This sequence creates a transparent, human-readable model. The path from the top
+(the root) to the bottom (a leaf) represents a decision rule.
+Hands-On: Building a Tree to Predict Pass Outcome
+Let’s build a tree to predict whether a pass will be completed. We’ll use StatsBomb
+event data from a high-pressure match to try to uncover the rules of successful
+passing. As in the previous chapters, we reuse the shared plotting helper and omit its
+internal implementation:
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.model_selection import train_test_split
+from soccerml_figures.plotting import (
+    apply_margins,
+    create_figure,
+    output_path,
+    save_figure,
+)
+# Load and prepare data (assuming 'passes' DataFrame is ready)
+features = ["start_x", "start_y", "pass_length"]  
+target = "completed"
+X = passes[features].dropna()
+y = passes.loc[X.index, target]
+164 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 185
+================================================================================
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+# Train a simple decision tree
+tree_clf = DecisionTreeClassifier(
+    max_depth=3, random_state=42,
+)  
+tree_clf.fit(X_train, y_train)
+# Visualize the tree
+fig, ax = create_figure()
+plot_tree(
+    tree_clf,
+    feature_names=features,
+    class_names=["Incomplete", "Complete"],
+    filled=True,
+    rounded=True,
+    fontsize=8,
+    ax=ax,
+)
+ax.set_title("Decision Tree for Pass Completion Prediction")
+apply_margins(
+    fig, left=0.01, right=0.99, top=0.82, bottom=0.03,
+)
+save_figure(fig, output_path(6, "pass-decision-tree"))
+Select simple features: the pass starting coordinates and its length.
+Set max_depth=3 to keep the tree small and interpretable. max_depth is a simple
+setting that controls the number of times the tree can ask yes-or-no questions
+before making a final decision. This prevents overfitting and makes the visualiza‐
+tion easy to read.
+This code trains a simple decision tree with a maximum of three levels of questions.
+The real magic happens when we visualize it. The resulting tree, shown in Figure 6-1,
+reveals a clear hierarchy of decisions.
+The Classification Tree: Soccer’s Decision Flowchart 
+| 
+165
+
+
+================================================================================
+PAGE 186
+================================================================================
+Figure 6-1. In this decision tree for predicting pass completion, the numbers are examples
+of what we could expect
+Interpreting the Soccer Intelligence
+The root node (top) first asks whether the pass length is less than or equal to 29.9
+meters. This is the most important factor for splitting the data. If a pass is longer than
+that, the model immediately becomes more skeptical about its completion.
+Let’s trace a path to extract a rule. If a pass is short (pass_length <= 29.9), and it
+starts far up the pitch in the attacking third (start_x > 93.5), the model is fairly
+confident it will be completed (the bottom-left leaf shows 65% of such passes are
+complete). This aligns with tactical wisdom: short, simple passes in the final third are
+crucial for maintaining possession and creating chances.
+Conversely, a long pass (pass_length > 29.95) that is also not extremely long
+(pass_length <= 53.8) and starts in the defensive half (start_x <= 58.2) has a
+much lower completion probability. This captures the risk of long balls out from the
+back.
+Understanding Pros and Cons: When to Use a Single Tree
+Decision trees are fantastic tools, but it’s important to know their strengths and weak‐
+nesses. Table 6-1 explains the advantages, and Table 6-2 explains the disadvantages.
+166 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 187
+================================================================================
+Table 6-1. Advantages of decision trees
+Advantage
+Description
+Transparency
+The model is transparent. You can explain every prediction by tracing the path from the root to the
+leaf. This is invaluable when presenting to coaches or stakeholders who need to trust the model’s
+reasoning.
+No feature scaling
+needed
+Trees split on feature values independently of scale. You don’t need to normalize or standardize your
+data, which simplifies the preprocessing pipeline.
+Handles nonlinear
+relationships
+Trees can model complex interactions between features (e.g., a pass is good only if it’s short and in the
+final third). This is a major advantage over linear models.
+Table 6-2. Disadvantages of decision trees
+Disadvantage
+Description
+High variance
+Small changes in the training data can lead to a completely different tree. This instability makes
+single trees unreliable for robust prediction.
+Prone to overfitting
+A deep tree will memorize the training data, including its noise, and fail to generalize to new,
+unseen data. This is the biggest challenge with decision trees.
+Limited predictive
+power
+A single tree is often less accurate than more complex ensemble methods. It’s a great exploratory
+tool but may not be the best choice for production-level prediction.
+Classification trees are an excellent starting point for understanding which features
+drive outcomes. When you need to present clear, actionable rules to a coaching staff,
+a simple tree is often the best tool for the job.
+Tuning the Tree: Preventing Overfitting
+The key to a useful tree is controlling its complexity. The max_depth parameter we
+used is a crucial tool for this. Let’s see how it affects performance:
+from sklearn.metrics import accuracy_score
+train_acc = []
+test_acc = []
+depths = range(1, 15)
+for depth in depths:
+    tree = DecisionTreeClassifier(
+        max_depth=depth, random_state=42,
+    )
+    tree.fit(X_train, y_train)
+    train_acc.append(
+        accuracy_score(y_train, tree.predict(X_train))
+    )  
+    test_acc.append(
+        accuracy_score(y_test, tree.predict(X_test))
+    )  
+fig, ax = create_figure()
+ax.plot(
+    depths,
+    train_acc,
+The Classification Tree: Soccer’s Decision Flowchart 
+| 
+167
+
+
+================================================================================
+PAGE 188
+================================================================================
+    label="Training Accuracy",
+    marker="o",
+    linewidth=2,
+)
+ax.plot(
+    depths,
+    test_acc,
+    label="Test Accuracy",
+    marker="s",
+    linewidth=2,
+)
+best_depth = max(zip(test_acc, depths))[1]
+ax.axvline(
+    best_depth,
+    color="red",
+    linestyle="--",
+    alpha=0.7,
+    label=f"Best Depth = {best_depth}",
+)
+ax.set_xlabel("Max Depth")
+ax.set_ylabel("Accuracy")
+ax.set_title(
+    "The Overfitting Problem: " "Training vs Test Accuracy"
+)
+ax.grid(True, alpha=0.3)
+ax.legend(loc="best")
+apply_margins(fig)
+save_figure(fig, output_path(6, "overfitting-curve"))
+Calculate the classification accuracy on the training data, which the model has
+already seen.
+Calculate the classification accuracy on the test data, which the model has not
+seen. This is the true measure of its performance.
+This code trains a new tree for each depth from 1 to 14 and records both the training
+and test accuracy. Figure 6-2 shows the output.
+This plot reveals a classic pattern. Training accuracy keeps improving as the tree
+grows deeper (it’s memorizing the data), but test accuracy peaks around a depth of 4
+and then declines. This is overfitting in action. The sweet spot (max_depth=4) gives
+us a model that generalizes well.
+168 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 189
+================================================================================
+Figure 6-2. The overfitting problem: training versus test accuracy
+Other key parameters to control overfitting include the following:
+min_samples_split
+The minimum number of samples required to split a node
+min_samples_leaf
+The minimum number of samples required to be at a leaf node
+max_features
+The number of features to consider when looking for the best split
+A well-tuned tree is a balance between bias and variance. But what if we could
+have hundreds of trees, each slightly different, and combine their wisdom? Enter the
+random forest.
+Random Forest: The Wisdom of the Crowd
+A single tree is insightful but unstable. Ask it the same question on slightly different
+data, and you might get a different answer. In soccer, we need robustness. The
+random forest algorithm provides this by building an ensemble of many decision trees
+and aggregating their predictions.
+Random Forest: The Wisdom of the Crowd 
+| 
+169
+
+
+================================================================================
+PAGE 190
+================================================================================
+The Intuition: Ensemble Learning
+Imagine you want to predict the outcome of a match. Instead of asking one expert,
+you ask a hundred. Each expert has slightly different knowledge and biases. While
+some might be wrong, the collective wisdom of the crowd is likely to be more
+accurate than any single expert. This is the core idea of a random forest.
+It builds hundreds of decision trees, but with two key twists:
+Bagging (bootstrap aggregating)
+Each tree is trained on a random sample of the training data, drawn with replace‐
+ment. This means some matches will appear multiple times in a tree’s training set,
+while others won’t appear at all.
+Feature randomness
+At each split in a tree, the algorithm considers only a random subset of features.
+This prevents any single strong feature (like distance_to_goal) from dominat‐
+ing all the trees.
+These two techniques ensure that the trees in the forest are diverse. To make a
+prediction, the random forest simply takes a majority vote from all the individual
+trees. This averaging process cancels out the noise and instability of individual trees,
+leading to a much more robust and accurate model.
+Hands-On: Building a Random Forest for to Predict Match Outcome
+Let’s build a random forest to predict whether a team will win, lose, or draw based on
+in-game statistics:
+from sklearn.ensemble import RandomForestClassifier
+# Assuming X_train, y_train for match outcomes are ready
+rf_clf = RandomForestClassifier(
+    n_estimators=100, random_state=42, n_jobs=-1
+)  
+rf_clf.fit(X_train, y_train)
+# Get feature importances
+importances = rf_clf.feature_importances_  
+feature_names = X_train.columns
+feature_importance = pd.DataFrame(
+    {"Feature": feature_names, "Importance": importances,}
+).sort_values("Importance", ascending=False)
+fig, ax = create_figure()
+ax.barh(
+    feature_importance["Feature"],
+    feature_importance["Importance"],
+    color="#4C78A8",
+)
+ax.invert_yaxis()
+ax.set_xlabel("Importance")
+170 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 191
+================================================================================
+ax.set_title(
+    "Random Forest Feature Importance " "for Match Outcome"
+)
+apply_margins(fig, left=0.2)
+save_figure(
+    fig, output_path(6, "random-forest-feature-importance"),
+)
+Create a forest of 100 trees. n_jobs=-1 tells scikit-learn to use all available CPU
+cores to train the trees in parallel.
+After training, we can ask the forest which features were most important in
+making its decisions.
+This code trains a random forest and then extracts the feature importances, which
+tell us which in-game stats were most influential in predicting the match outcome.
+Figure 6-3 shows the output.
+Figure 6-3. Random forest feature importance for match outcome
+Interpreting Feature Importance
+The plot in Figure 6-3 shows how the random forest classifier in the preceding code
+evaluates different features.
+In particular, we can see that home_shots and away_passes were the two most
+important features for predicting the outcome. Coming in third is away_shots. It’s
+remarkable that away_shots and away_passes score so high—in the same order of
+magnitude as home_shots—because it suggests that the offensive actions of the away
+team are almost as predictive of the result as the home team’s actions. This could
+be because home teams are generally expected to dominate, so when an away team
+Random Forest: The Wisdom of the Crowd 
+| 
+171
+
+
+================================================================================
+PAGE 192
+================================================================================
+manages to generate a lot of passes and shots, it’s a strong signal that an upset might
+be in the cards.
+Unlike a single decision tree, we can’t easily visualize a random forest. We trade some
+interpretability for a big gain in predictive power. However, feature importance plots
+give us a high-level understanding of what the model has learned.
+Tuning Random Forests
+Random forests are less prone to overfitting than single trees, but they still have
+important hyperparameters to tune:
+n_estimators
+The number of trees in the forest. More is generally better, but that comes at a
+computational cost.
+max_depth
+The maximum depth of each tree. Deeper trees can capture more complex
+patterns but risk overfitting.
+max_features
+The number of features to consider at each split. A smaller number increases the
+diversity of the trees.
+For most applications, a random forest with default parameters provides a very
+strong baseline model. It’s the perfect tool when you need high accuracy and robust‐
+ness without the extensive hyperparameter tuning required by more complex models
+like XGBoost.
+Using Out-of-Bag Error
+One of the clever features of random forests is the out-of-bag (OOB) error estimate.
+Remember that each tree is trained on a bootstrap sample of the data, meaning some
+data points are left out. These left-out samples can be used as a validation set for that
+particular tree. By aggregating predictions across all trees for which a data point was
+OOB, we get a free cross-validation estimate without needing a separate validation
+set.
+This is particularly useful when working with limited data, as it allows you to use
+all available data for training while still getting an honest estimate of model perfor‐
+mance. In scikit-learn, you can enable this by setting oob_score=True when creating
+your random forest classifier.
+172 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 193
+================================================================================
+Understanding When Random Forests Struggle
+While random forests are powerful, they have limitations. They can struggle with the
+following:
+• Very high-dimensional sparse data (e.g., text data with thousands of features)
+•
+• Extrapolation beyond the range of training data (they can predict only values
+•
+within the range they’ve seen)
+• Capturing very complex sequential patterns (where the order of events matters
+•
+significantly)
+For soccer analytics, these limitations rarely pose problems. Most soccer features are
+continuous or categorical with reasonable dimensionality, and the relationships we’re
+modeling are well within the training data’s range.
+XGBoost: Learning from Mistakes
+A random forest builds an army of independent experts. XGBoost takes a different
+approach: it builds a team of specialists who learn from one another’s mistakes. In
+this sequential process, each new tree is built to correct the errors of the previous one.
+The Intuition: Sequential Learning
+Imagine you’re trying to predict expected goals (xG). Your first model is a simple one
+that looks only at shot distance. It does OK, but it makes a lot of mistakes. XGBoost
+then builds a second model, but instead of trying to predict xG directly, it tries to
+predict the errors (the residuals) of the first model. By adding the predictions of this
+second model to the first, you get a more accurate overall prediction.
+XGBoost repeats this process hundreds or thousands of times. Each new tree is a
+small, weak learner that focuses on the remaining errors. By chaining them together,
+XGBoost creates an incredibly powerful and accurate final model. This technique,
+called gradient boosting, is one of the most successful and widely used algorithms in
+machine learning competitions and real-world applications.
+Hands-On: XGBoost for xG Prediction
+Let’s use XGBoost to build a state-of-the-art xG model:
+import xgboost as xgb
+# Assuming X_train, y_train for xG prediction are ready
+xgb_model = xgb.XGBClassifier(
+    objective="binary:logistic",
+    eval_metric="logloss",
+)  
+xgb_model.fit(X_train, y_train)
+XGBoost: Learning from Mistakes 
+| 
+173
+
+
+================================================================================
+PAGE 194
+================================================================================
+Specify the objective function (binary:logistic for binary classification) and
+the evaluation metric (logloss). Log loss was introduced as a cost function in
+“Evaluation of Probabilistic Models with Cost Functions” on page 137.
+This code trains an XGBoost model. While it’s highly accurate, it’s also an opaque
+model. How can we understand its predictions? This is where SHAP comes in.
+Performing SHAP Analysis: Explaining the Opaque Model
+Shapley additive explanations (SHAP) is a game theory approach to explaining the
+output of any machine learning model. For our xG model, SHAP can tell us exactly
+how much each feature contributed to a specific shot’s predicted xG value:
+import shap
+from soccerml_figures.plotting import (
+    PLOT_DPI,
+    output_path,
+    save_figure,
+)
+# Create SHAP explainer
+explainer = shap.TreeExplainer(xgb_model)  
+shap_values = explainer.shap_values(X_test)  
+# Summary plot (code to generate the image)
+shap.summary_plot(
+    shap_values, X_test, show=False, plot_size=None,
+)  
+fig = plt.gcf()
+fig.set_size_inches(4.8, 2.97)
+fig.set_dpi(PLOT_DPI)
+fig.axes[0].set_title(
+    "SHAP Summary Plot: " "Feature Impact on Goal Prediction"
+)
+save_figure(fig, output_path(6, "shap-summary"))
+Create a TreeExplainer that is optimized for tree-based models like XGBoost.
+Calculate the SHAP values for every prediction in our test set.
+The shap library has a powerful built-in visualization module.
+This visualization, shown in Figure 6-4, is incredibly powerful (some visuals have been
+changed for optimal display in the book, but the previous code will get you started).
+It reveals how each feature influences goal predictions across all shots. Features are
+ranked by their overall importance. For each feature, individual shots are plotted
+horizontally by their SHAP value. Light-colored dots represent high feature values (e.g.,
+close shots), while dark-colored dots represent low values (e.g., distant shots).
+174 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 195
+================================================================================
+Figure 6-4. SHAP summary plot: feature impact on goal prediction
+The plot shows a few striking insights. Particularly, we can see that player_finish
+ing has a strong impact on goal prediction. The lighter dots on the right indicate that
+when the player does finish, the model indeed predicts a goal, and when the player
+doesn’t, usually no goal occurs. This is clear intuitively—however, it’s an important
+indicator that our model is working correctly. We can also see the impact of other
+features like angle_width and pressure. SHAP gives us the interpretability of a
+simple model with the power of a complex one.
+XGBoost: Learning from Mistakes 
+| 
+175
+
+
+================================================================================
+PAGE 196
+================================================================================
+Tuning XGBoost: The Art of Hyperparameter Optimization
+XGBoost’s power comes with complexity. It has many hyperparameters that control
+the learning process. These are the most important ones for soccer analytics:
+learning_rate (or eta)
+Controls how much each tree contributes to the final prediction. Lower values
+(0.01–0.1) require more trees but often lead to better performance.
+max_depth
+The maximum depth of each tree. Typical values range from 3 to 10. Deeper trees
+can model more complex patterns but risk overfitting.
+n_estimators
+The number of boosting rounds (trees). More is generally better, but with dimin‐
+ishing returns and increased computation time.
+subsample
+The fraction of samples used for each tree. Values like 0.8 introduce randomness
+and help prevent overfitting.
+colsample_bytree
+The fraction of features used for each tree. This is similar to random forest’s
+max_features.
+reg_alpha and reg_lambda
+L1 and L2 regularization terms. These penalize complex models and help prevent
+overfitting.
+A typical tuning workflow starts with default parameters, then uses cross-validation
+to systematically explore different combinations. Grid search or randomized search
+can help find optimal values, but be prepared for this to take time because XGBoost
+training can be computationally expensive.
+Knowing When to Use XGBoost Versus Random Forest
+Both XGBoost and random forest are ensemble methods, but they excel in different
+scenarios.
+Use random forest for these circumstances:
+• You need a quick, robust baseline with minimal tuning.
+•
+• Interpretability through feature importance is sufficient.
+•
+• Training time is a constraint.
+•
+• Your dataset is small to medium-sized.
+•
+176 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 197
+================================================================================
+Use XGBoost for these scenarios:
+• You need maximum predictive accuracy.
+•
+• You have time for careful hyperparameter tuning.
+•
+• Your dataset is large.
+•
+• You can use SHAP for interpretability.
+•
+• You’re building a production system where accuracy is critical.
+•
+For most soccer analytics projects, starting with random forest and moving to
+XGBoost only when necessary is a pragmatic approach. The performance gain from
+XGBoost is often modest (2%–5% improvement in accuracy), but in competitive
+settings like betting or player valuation, even small gains matter.
+Practical Applications: From Theory to Practice
+Having covered the theory and mechanics of tree-based models, let’s explore how
+to apply them to real-world soccer analytics challenges. This section walks through
+typical workflows for common tasks.
+Example 1: Building a Comprehensive xG Model
+Building a production-quality xG model is one of the most important applications in
+modern soccer analytics. The workflow follows these steps:
+1. Data collection and preparation
+Gather shot data from StatsBomb, including location, body part, technique,
+pressure, and contextual features like score differential and game state
+2. Feature engineering
+Create derived features such as distance to goal, angle to goal, and interaction
+terms (e.g., distance × pressure)
+3. Model selection
+Start with logistic regression as a baseline, then build a decision tree for inter‐
+pretability, a random forest for robustness, and finally XGBoost for maximum
+accuracy
+4. Evaluation
+Use cross-validation to compare models on metrics like log loss, Brier score, and
+calibration curves (see “Evaluation of Probabilistic Models with Cost Functions”
+on page 137 for a full treatment of these metrics). For xG, calibration is particu‐
+larly critical: if the model assigns 0.3 xG to a shot, actual goals should occur 30%
+of the time across all such shots
+Practical Applications: From Theory to Practice 
+| 
+177
+
+
+================================================================================
+PAGE 198
+================================================================================
+5. Interpretation
+Use SHAP to understand which features drive predictions and validate that they
+make soccer sense
+6. Deployment
+Package the model for use in match analysis, player evaluation, or tactical
+planning
+A well-built xG model becomes the foundation for many downstream analyses:
+player finishing ability (actual goals versus xG), chance creation quality, and defen‐
+sive performance.
+Example 2: Predicting Player Actions
+Another valuable application is predicting what a player will do next: pass, dribble, or
+shoot. This helps coaches understand decision-making patterns and identify players
+who make optimal choices under pressure.
+The challenge here is the multiclass nature of the problem. A player might have
+three to five viable options at any moment. Tree-based models handle this naturally
+through their splitting mechanism.
+Key features for this task include the following:
+• Player position and orientation
+•
+• Locations of teammates and opponents
+•
+• Distance to goal and passing lanes
+•
+• Game state (score, time remaining)
+•
+• Player attributes (preferred foot, role)
+•
+A random forest works well for this task because it can capture the complex interac‐
+tions between spatial features (where teammates are) and contextual features (game
+state). The feature importance plot reveals which factors most influence decision-
+making, providing insights for coaching.
+Example 3: Recognizing Tactical Patterns
+Tree-based models can also identify tactical patterns. For example, you might want to
+classify a team’s build-up style: direct, possession-based, or counterattacking.
+This requires aggregating event data at the match or possession level. Features might
+include the following:
+• Average pass length and direction
+•
+• Time per possession
+•
+178 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 199
+================================================================================
+• Proportion of passes in different pitch zones
+•
+• Speed of transition from defense to attack
+•
+A decision tree is ideal here because the resulting rules are directly interpretable: If
+average pass length > 25 meters and time per possession < 8 seconds, then classify as
+direct. These rules can be shared with coaching staff as actionable insights.
+Handling Imbalanced Data in Soccer
+Many soccer prediction tasks involve imbalanced classes. Goals are rare (shots con‐
+vert about 10% of the time), away wins are less common than home wins, and certain
+player actions (like successful dribbles in the box) are infrequent.
+Tree-based models handle imbalance reasonably well, but you can improve perfor‐
+mance with these techniques:
+Class weighting
+Use the class_weight='balanced' parameter in scikit-learn to automatically
+adjust for class imbalance.
+Resampling
+Oversample the minority class or undersample the majority class. The
+imbalanced-learn library provides tools like synthetic minority oversampling
+technique (SMOTE).
+Threshold tuning
+Adjust the decision threshold to favor recall or precision based on your applica‐
+tion. For injury prediction, you might prioritize recall (catching all potential
+injuries) even at the cost of false positives.
+Evaluation metrics
+Don’t rely solely on accuracy. Use precision, recall, F1 score, and area under the
+curve (AUC)-receiver operating characteristic (ROC), which are more informa‐
+tive for imbalanced data.
+In the xG example, the imbalance is severe (90% nongoals). Without adjustment, a
+naive model might predict No Goal for everything and still achieve 90% accuracy.
+Class weighting or threshold tuning ensures that the model learns to identify the rare
+goal events.
+Practical Applications: From Theory to Practice 
+| 
+179
+
+
+================================================================================
+PAGE 200
+================================================================================
+Using Feature Engineering for Tree-Based Models
+While tree-based models are powerful, they still benefit from thoughtful feature
+engineering. Here are tips specific to soccer analytics:
+Spatial features
+Convert (x,y) coordinates into meaningful features like distance to goal, angle to
+goal, and proximity to defenders.
+Temporal features
+Include time-based features like minute of the match, time since last goal, or days
+since last match.
+Interaction Features
+Create features that capture relationships, such as pass length × pressure or shot
+angle × goalkeeper position.
+Aggregated features
+For player-level predictions, include rolling averages of recent performance (e.g.,
+average xG per 90 minutes over the last five matches).
+Categorical encoding
+Tree-based models handle categorical features naturally, but encoding them
+as integers (ordinal encoding) or one-hot encoding can sometimes improve
+performance.
+The key is to create features that capture soccer domain knowledge. A model can’t
+learn what it doesn’t see in the data.
+Looking Ahead: From Handcrafted Rules to
+Learned Representations
+The tree-based methods in this chapter represent a significant step forward from the
+linear classifiers we started with. Decision trees, random forests, and XGBoost can
+all discover thresholds, interactions, and nonlinear structure in soccer data without
+requiring us to specify those patterns in advance. Yet they still share one underlying
+assumption: the features we hand the model are the right building blocks. Whether it
+is distance to goal, angle, or a pressure-distance interaction term, we are still the ones
+deciding what the model gets to see.
+In Chapter 7, we take a further step by introducing deep learning and neural net‐
+works. Rather than relying solely on handcrafted features, neural networks can learn
+layered internal representations directly from data—discovering combinations and
+abstractions that we might not have thought to encode ourselves. We will build mod‐
+els for the same soccer tasks we have been working on throughout this book: binary
+180 
+| 
+Chapter 6: Advanced Classification Methods
+
+
+================================================================================
+PAGE 201
+================================================================================
+match outcome prediction, multiclass result forecasting, and goal scoring. We will
+do so in both PyTorch and TensorFlow, so you can see how the same ideas translate
+across the two dominant deep learning frameworks. The goal is not to treat neural
+networks as an opaque model that simply outperforms everything else, but to develop
+a clear sense of when that added expressiveness is worth the extra complexity—and
+when a well-tuned random forest or XGBoost model is still the right tool for the job.
+Conclusion
+Tree-based methods deepen the classification toolkit by giving us models that can
+represent thresholds, interactions, and nonlinear structure more naturally than the
+linear methods from Chapter 5. Across decision trees, random forests, and XGBoost,
+the central idea is the same: break a difficult predictive task into simpler rules and
+combine those rules in a disciplined way.
+Each method brings a different balance of transparency, stability, and raw predictive
+power. A single tree is easy to explain. Random forests reduce variance and improve
+robustness. Gradient boosting pushes performance further by learning sequentially
+from earlier errors.
+Choosing the right algorithm depends on the trade-off between interpretability and
+predictive accuracy. Table 6-3 gives you some more guidance on which algorithm to
+select.
+Table 6-3. Algorithm selection guide for decision tree, random forest, and XGBoost
+Criteria
+Decision tree
+Random forest
+XGBoost
+Interpretability
+Excellent
+Good
+Moderate (with SHAP)
+Predictive accuracy
+Poor
+Good
+Excellent
+Training speed
+Fast
+Medium
+Slow
+Robustness to noise Poor
+Excellent
+Good
+As you apply these methods to your own soccer analytics projects, remember that
+the most sophisticated model is not always the best choice. Start with a decision tree
+to understand the problem and establish a baseline. Move to a random forest when
+you need robustness and better accuracy without extensive tuning. Reserve XGBoost
+for situations where additional predictive power justifies the added complexity and
+computational cost.
+In Chapter 7, we push this progression further. Instead of hand-specifying interac‐
+tions or letting trees discover them through splits, we will look at neural networks
+that learn richer internal representations directly from data. The workflow remains
+familiar, but the modeling framework becomes more expressive.
+Conclusion 
+| 
+181
+
+
+================================================================================
+PAGE 202
+================================================================================
+
+
+================================================================================
+PAGE 203
+================================================================================
+CHAPTER 7
+Deep Learning for Soccer Analytics:
+From Intuition to Implementation
+So far in this book, we have mostly worked with models that depend on carefully
+chosen features and relatively direct relationships between inputs and outputs. That
+is an excellent place to begin. It teaches discipline, interpretability, and the logic of
+building models step by step. But it also has limits.
+Soccer doesn’t always present itself in a few clean columns. Its signal is often frag‐
+mented across many interacting variables: player movement, match state, tactical
+structure, momentum, fatigue, and the subtle feedback loops that emerge over the
+course of a game. What matters is not always one stat, or even one cluster of stats, but
+the way many pieces combine. And in many cases, the most useful representation of
+that structure is not obvious in advance.
+This is where deep learning becomes compelling. Deep learning is built around
+neural networks: flexible models that can learn layered representations from data
+rather than relying only on handcrafted rules or simple linear relationships. Instead
+of asking us to specify every important interaction ahead of time, deep learning gives
+the model room to discover patterns that are distributed, nonlinear, and difficult to
+encode manually.
+In soccer analytics, that matters because the game is rich, contextual, and deeply
+interconnected. Deep learning can help us move beyond isolated indicators and
+toward models that capture relationships among match context, team strength, scor‐
+ing patterns, and game dynamics. It does not replace domain knowledge. Rather, it
+gives us a more expressive framework for using that knowledge when the structure of
+the problem becomes too complex for simpler approaches to handle gracefully.
+183
+
+
+================================================================================
+PAGE 204
+================================================================================
+In this chapter, you’ll learn why deep learning has become such an important part
+of the modern analytical toolkit, especially when the relationships in the data are too
+intricate for simpler models to capture well. You’ll also build deep learning models for
+several soccer tasks, from classification to goal prediction and multitask learning. The
+aim is not to treat deep learning as magic but to understand when it is useful, what it
+is learning, and how to implement it in practice.
+By the end of this chapter, you should be able to do the following:
+• Understand the main ideas behind deep learning.
+•
+• Understand the basic logic of model design, training, and evaluation.
+•
+• Build soccer prediction models in both PyTorch and TensorFlow for binary
+•
+classification, multi-class prediction, and goal modeling.
+• Recognize common challenges and know where to start when a model needs
+•
+troubleshooting or refinement.
+This chapter combines three things at once: the core ideas behind
+deep learning, a hands-on implementation in PyTorch, and an
+alternative implementation in TensorFlow.
+If this feels like a lot, that is normal. The fastest way to get moving
+is to follow one framework closely on your first read-through. You
+do not need to master both PyTorch and TensorFlow at the same
+time.
+If you already have some background in neural networks, feel free
+to skim the conceptual sections and focus on the implementation.
+If the concepts are new to you, however, reading those sections first
+is worthwhile so you can build a clear big-picture understanding
+before diving into the code. The goal here is not to master all
+the mathematics at once but to develop enough intuition to start
+building useful models quickly.
+Here is a useful reading path:
+1. Read the conceptual sections through loss functions.
+1.
+2. Follow the PyTorch implementation as the main hands-on
+2.
+track.
+3. Treat the TensorFlow section as a second lens or reference
+3.
+rather than as material you must master on the same pass.
+If you are short on time, steps 1 and 2 give you the main narrative
+of the chapter.
+184 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 205
+================================================================================
+We’ll work through four soccer prediction tasks, each one building on the last:
+1. Binary: what is the probability that the home team wins?
+1.
+2. Multiclass: what is the full-time result (home team win, draw, or away team win)?
+2.
+3. Regression with a Poisson distribution: how many goals will the home team
+3.
+score?
+4. Multitask: how many goals will the home and away teams score?
+4.
+We will keep the explanations soccer-specific and the code as light as possible. The
+main walk-through uses PyTorch, and a parallel TensorFlow implementation appears
+later, in “A Second Lens: Implementing the Model in TensorFlow” on page 209. On a
+first read, it is perfectly fine to treat PyTorch as the primary path and TensorFlow as a
+comparison section.
+Why Deep Learning for Soccer? Beyond Traditional Models
+One useful way to build intuition is to imagine a team moving the ball from the
+goalkeeper through the back line, midfield, and attack. The ball starts deep, moves
+through different lines, and eventually reaches the final attacking action. In a neural
+network, data moves in a similar way: it enters the model, passes through several
+layers, and eventually produces a prediction. In this analogy, each neuron in the
+network is like a player handling and passing information, while each layer is like a
+unit of the team. Figure 7-1 illustrates this.
+The analogy is only for intuition. Neural networks were originally inspired by simpli‐
+fied ideas about the way biological neurons receive signals, process them, and pass
+them on. For our purposes, what matters is the structure: information comes in, is
+transformed through several layers, and leaves the network as an output.
+In practice, a neural network has three main types of layers. The input layer receives
+the raw features, such as soccer statistics or engineered variables. One or more
+hidden layers transform those inputs into increasingly useful internal representations.
+A network with two or more hidden layers is usually described as a deep learning
+model. Finally, the output layer produces the prediction, such as a win probability, a
+match result, or an expected goal count.
+Each layer consists of individual neurons. Each neuron comes with an activation
+function, which helps govern when it passes information onward and when it stays
+quiet. Between these layers of neurons, forward propagation is the process that moves
+information through the network. Finally, a loss function assesses the difference
+between reality and the neural network’s prediction—in essence, a measure of the
+model’s quality.
+Why Deep Learning for Soccer? Beyond Traditional Models 
+| 
+185
+
+
+================================================================================
+PAGE 206
+================================================================================
+The rest of this section introduces these concepts in more detail. Once we have
+covered these, we’ll apply them step by step to soccer prediction tasks, starting simple
+(home team win/loss) and moving toward more complex predictions (results for both
+home and away team, goals, multitask models). A schematic of a neural network is
+shown in Figure 7-1.
+Figure 7-1. A neural network
+Looking Inside the Model: How Neural Networks Capture Patterns
+Before we dive into coding, let’s understand just enough about how a neural network
+works to make sense of the models we’ll build. Our conceptual overview will cover
+neurons, activation functions, forward propagation, and loss functions.
+Neurons
+Just like lines in a formation are made up by individual soccer players, layers in
+neural networks are made up by neurons (hence the neural in neural networks). Every
+neuron is connected to all the neurons in the layers before and after it, but not to the
+neurons in its own layer.
+The knowledge of a neural network is quantified in weights. You can think of them as
+the strength of the connections between individual neurons. Some neurons might be
+very connected, others less so.
+For example, teams that take many shots on target typically score more goals. In
+a neural network, the connection (weight) between a neuron representing shots on
+target (near the input layer) and a neuron representing goals scored (in the output
+layer) would become strong as the model learns this relationship.
+In addition to weights, each neuron has a bias—a kind of built-in tendency that
+shifts its decision making independent of the inputs. In the soccer analogy, you might
+186 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 207
+================================================================================
+think of the bias as a player’s default positioning or instinct before the next pass even
+arrives. This bias allows neurons to activate (or stay quiet) more flexibly, making the
+entire network better at adapting to complex game patterns.
+Activation functions
+Weights and biases alone are not enough. We also need to decide when information
+flows through the network and when it doesn’t. In soccer terms, not every passing
+lane stays open, and not every move deserves to continue the attack. Sometimes the
+play breaks down, and sometimes it flows cleanly into the next line. That selective
+go/no-go effect is the role of activation functions.
+The three most common are the rectified linear unit (ReLU), sigmoid, and hyperbolic
+tangent (tanh). We’ll use the first two heavily in this chapter.
+The ReLU.    The ReLU is a fairly basic function: give an input below a certain thresh‐
+old, and it is 0. Above that threshold, it is equal to the input value.
+Mathematically, we can write the ReLU function like this:
+f(x) = max (0, x)
+You can think of it like goal counts: there’s no such thing as negative goals, but after
+the team starts scoring, every additional goal adds up. Check Figure 7-2 to see what
+this looks like.
+ReLU makes networks efficient (lots of 0s where nothing happens) and flexible (many
+ReLUs stacked together create complex patterns). The main drawback is that if too
+many inputs fall below zero, parts of the network “die” and stop learning.
+Figure 7-2. A ReLU function
+Why Deep Learning for Soccer? Beyond Traditional Models 
+| 
+187
+
+
+================================================================================
+PAGE 208
+================================================================================
+The sigmoid function.    The sigmoid function provides a smooth, probabilistic output
+from 0 to 1. For example, we might model the probability that a goal gets scored in a
+match with this function. It is written like this:
+y =
+1
+1 + e−x
+The sigmoid function is perfect for outputs we want to read as probabilities—for
+example, what’s the chance the home team wins? The downside is that when values get
+too extreme, the curve flattens and learning slows (the vanishing gradient problem).
+Figure 7-3 shows what this looks like. It’s flat and near 0 at low x-axis values, then
+curves up, and finally flattens again toward y = 1 for high x.
+Figure 7-3. A sigmoid function
+The hyperbolic tangent (tanh).    Tanh is similar to sigmoid but ranges from –1 to 1, so
+it is centered on zero. It can sometimes train faster than sigmoid, but like sigmoid,
+it also suffers from vanishing gradients. We won’t use it further here, but it’s worth
+knowing as another option in the toolbox.
+Forward propagation
+Forward propagation is the process of moving data through a network to generate
+predictions. Think of it like a team building an attack from the goalkeeper. The
+ball moves through defenders, into midfield, and then toward the forwards. At each
+stage, the tactical setup influences where the ball goes next. In the network, weights
+influence how strongly information is passed forward, biases shift each neuron’s
+tendency, and activation functions help decide whether that signal continues.
+188 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 209
+================================================================================
+Here’s a minimal two-layer example in Python:
+import numpy as np
+def relu(x):
+    return np.maximum(0, x)
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+def forward_propagation(X, weights, biases):
+    """Run forward propagation for a two-layer network."""
+    # Hidden layer: Z = XW + b
+    z1 = np.dot(X, weights[0]) + biases[0]
+    # Apply ReLU nonlinearity
+    a1 = relu(z1)
+    # Output layer: Z = AW + b
+    z2 = np.dot(a1, weights[1]) + biases[1]
+    # Convert logits to probabilities
+    a2 = sigmoid(z2)
+    return a2
+The input layer X is typically our match data (shots, passes, possession, etc.). The hid‐
+den layers transform that information, a bit like the team reshaping the move as the
+ball travels through different lines. The output layer applies another transformation
+and sigmoid. This gives us a probability, such as how likely is a home win?
+In practice, weights and biases (which are inputs to the forward propagation func‐
+tion) are not chosen by hand. Instead, the training sets them based on thousands
+of matches. Here we’re just illustrating how information flows from raw features,
+through hidden decision layers, to a prediction. If you continue the soccer analogy,
+the final prediction is like the shot at the end of the move: the whole attacking
+sequence leads up to that outcome.
+Loss functions
+How do we judge whether a model is “playing well”? In soccer, the scoreboard tells us
+whether a team’s strategy is working. In machine learning, that scoreboard is the loss
+function: a number that measures how far off the model’s predictions are from reality.
+A lower loss means our predictions are closer to the truth. During training, the
+network constantly updates its weights to reduce this loss.
+Different prediction tasks call for different loss functions:
+Binary cross-entropy (BCE)
+For yes/no tasks like will the home team win? (1 for win, 0 for not win)
+Categorical cross-entropy
+For multiclass outcomes such as predicting win/draw/loss
+Why Deep Learning for Soccer? Beyond Traditional Models 
+| 
+189
+
+
+================================================================================
+PAGE 210
+================================================================================
+Poisson regression loss
+For count data, such as predicting the number of goals a team scores
+Mean squared error (MSE)
+For continuous values, such as predicting an exact scoreline
+We’ll use these functions later, matching each one to the soccer task at hand. Think of
+them as different ways of keeping score, depending on what question we’re asking the
+model.
+Learning from Data: Training, Loss, and Optimization
+Before we can train a model to make good predictions, we need to understand how it
+learns from mistakes. In this section, we’ll see how a network “watches game tape” of
+its own predictions and corrects its play, using three key ideas:
+Backpropagation
+How errors flow backward through the network
+Gradient descent
+How the network uses those errors to adjust its weights step by step
+Regularization
+How the network balances fitting the data with maintaining generalization
+Backpropagation
+Backpropagation is the method a neural network uses to learn from errors. Imagine
+replaying a failed attack in slow motion: the team builds the play from the back,
+works the ball forward, creates a shot, and then fails to score because the attempt
+is blocked, saved, or off target. The coach then rewinds the move from the shot all
+the way back through the earlier passes, pointing out where the buildup could be
+improved. In a similar fashion, backpropagation (also called backprop) takes the pre‐
+diction error at the output layer and works backward through the network, showing
+each weight how much it contributed to the mistake.
+The key output of this process is the gradient. It’s a measure of how much the loss
+changes from changing a specific weight. By collecting these gradients layer by layer,
+the network knows how to tweak itself so the next play (prediction) is a little more
+accurate. Importantly, the learning signal begins at the final outcome, but the adjust‐
+ments are not limited to the final layer. Earlier layers also change, just as a failed attack
+may lead a team to adjust its buildup, spacing, or passing choices, not only the final
+shot.
+190 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 211
+================================================================================
+Instead of retraining from scratch, backpropagation efficiently updates the model by
+making these small corrections after every batch of data. You can think of it as the
+feedback loop that turns a failed attacking sequence into a slightly better one next time.
+Gradient descent
+Backpropagation tells each weight how it contributed to an error; gradient descent is
+how the network uses that feedback to improve. The idea is simple: adjust the weights
+little by little in the direction that makes the loss smaller.
+Think of repeated tactical fine-tuning after reviewing performance. The system does
+not restart from scratch after each mistake. Instead, it makes repeated small adjust‐
+ments that improve the overall model over time. You can see this in Figure 7-4.
+Figure 7-4. Gradient descent iteratively adjusts weights to reduce error
+Gradient descent has three main types:
+Batch gradient descent
+Uses the entire training dataset to make one big adjustment. Very stable, but slow
+if the dataset is huge.
+Stochastic gradient descent (SGD)
+Updates after each single example. Faster to react, but the learning path can be
+noisy.
+Mini-batch gradient descent
+A commonly used balance because it updates after a small group of examples at a
+time, thus combining stability with speed.
+Why Deep Learning for Soccer? Beyond Traditional Models 
+| 
+191
+
+
+================================================================================
+PAGE 212
+================================================================================
+Here’s a simple version of mini-batch gradient descent in Python:
+for epoch in range(epochs):
+    # Shuffle match data
+    indices = np.random.permutation(n_samples)
+    X_shuffled, y_shuffled = X[indices], y[indices]
+    # Split into mini-batches
+    for i in range(0, n_samples, batch_size):
+        X_batch = X_shuffled[i : i + batch_size]
+        y_batch = y_shuffled[i : i + batch_size]
+        # Compute gradients and update weights
+        grad_w, grad_b = compute_gradients(
+            X_batch, y_batch, weights, bias
+        )
+        weights -= learning_rate * grad_w
+        bias -= learning_rate * grad_b
+Each epoch follows the same pattern:
+1. Shuffle the matches (to avoid overfitting to order).
+1.
+2. Break them into smaller mini-batches.
+2.
+3. Compute gradients for each mini-batch and update the weights.
+3.
+Note that compute_gradients is a stand-in for the backpropagation process. In
+practice, you won’t code this from scratch. Libraries like PyTorch and TensorFlow
+automatically calculate gradients for you (via loss.backward() in PyTorch, or Gra
+dientTape in TensorFlow).
+Backpropagation tells us how the model was wrong, and gradient descent uses that
+information to make the next update. That steady improvement is what turns error
+signals into better weights and biases over time.
+Regularization techniques
+A model that only memorizes the training data will struggle when it sees new
+matches. As noted in Chapter 4, this problem is called overfitting: the model per‐
+forms brilliantly on training data but poorly on unseen data. Figure 7-5 shows a
+schematic of this principle.
+192 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 213
+================================================================================
+Figure 7-5. In overfitting, training loss keeps dropping, but validation loss rises
+Regularization helps prevent this by nudging the model toward more general strate‐
+gies. The main tools are listed here:
+L1 (Lasso)
+Shrinks some weights all the way to 0, thus focusing only on the most decisive
+stats (for example, shots on target) and ignoring other noise
+L2 (Ridge)
+Softens all weights a little, making sure no single statistic (say, possession per‐
+centage) dominates the analysis.
+Dropout
+Randomly removes some neurons during training, forcing the network to find
+multiple paths to a solution rather than relying too heavily on any one set of
+activations
+These techniques use a lot of mathematical detail. In practice, however, you’ll rarely
+code them by hand, since PyTorch and TensorFlow have them built in. What matters
+is knowing why they exist: to keep your model from memorizing individual training
+examples at the expense of learning patterns that hold more generally.
+Building Your First Soccer Prediction Model with PyTorch
+PyTorch is a powerful open source framework designed for building and training
+neural networks. It is known for its user-friendly interface, robust GPU acceleration,
+and extensive library ecosystem, which is ideal for our soccer-related tasks (and many
+others too).
+Building Your First Soccer Prediction Model with PyTorch 
+| 
+193
+
+
+================================================================================
+PAGE 214
+================================================================================
+Binary Outcomes: Will the Home Team Win?
+Let’s begin with the simplest prediction task: estimating the probability that the home
+team wins. This is a binary classification problem. The model will look at pre-match
+features (form, shots, injuries, possession metrics, and so on) and output a number
+from 0 to 1 that we interpret as a win probability.
+Our model will learn from historical match data to estimate the probability of a home
+win. To get there, we’ll go through three steps: preparing the data, building the model
+architecture, and then training and evaluating it.
+Preparing the data
+Before we can train a model, we need to put our data into a format PyTorch under‐
+stands. PyTorch provides a handy tool called the DataLoader, which takes in tensors
+and produces mini-batches for training. A mini-batch is just a small slice of the data.
+Rather than feeding the entire season of matches into the model at once, we present it
+with a handful of matches at a time, which makes training faster and helps the model
+generalize.
+Here is an implementation that you can copy into your Jupyter notebook:
+from sklearn.model_selection import train_test_split
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+import torch.nn as nn
+import torch.optim as optim
+# X: shape (n_samples, n_features), y: 0/1 (home win)
+X = torch.tensor(X, dtype=torch.float32)
+y = torch.tensor(
+    y, dtype=torch.float32
+)  # Float targets for BCE*
+# Train–test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+# DataLoaders (mini-batches)
+train_data = TensorDataset(X_train, y_train)
+test_data = TensorDataset(X_test, y_test)
+train_loader = DataLoader(
+    train_data, batch_size=32, shuffle=True
+)
+test_loader = DataLoader(
+    test_data, batch_size=32, shuffle=False
+)
+Let’s break this down. First, we convert X and y into tensors, which are essentially
+PyTorch’s version of arrays. The features (X) might include stats like average posses‐
+sion or number of corners, while the labels (y) are binary: 1 if the home team won, 0
+if not.
+194 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 215
+================================================================================
+Next, we split the dataset into a training set (80%) and a test set (20%). The training
+set is what the model learns from; the test set is held back to check how well the
+model generalizes to new matches it hasn’t seen before.
+Finally, we wrap the data in a TensorDataset and pass it to a DataLoader. During
+training, the DataLoader will give us small, shuffled batches of size 32. Shuffling
+ensures that the model doesn’t learn anything artificial from the order of the matches.
+In other words, we do not want the model to confuse sequence in the dataset with a
+real predictive signal.
+Defining the model architecture
+Now we need to define the neural network itself. For this task, we’ll use a simple
+multilayer perceptron (MLP): one hidden layer with 16 neurons, followed by a single
+output neuron:
+class MLP(nn.Module):
+    def __init__(self, input_size, hidden_size=16):
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(hidden_size, 1)  # One logit
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)  # Return logits
+        return x
+input_size = X_train.shape[1]
+model = MLP(input_size, hidden_size=16)
+criterion = nn.BCEWithLogitsLoss()  # Stable binary loss
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+This code defines an MLP class that inherits from nn.Module. This is standard practice
+in PyTorch because nn.Module provides a lot of useful functionality for training and
+evaluating neural networks.
+Here’s what happens after that:
+• The input layer matches the number of features we provide. Each feature (shots,
+•
+possession, xG) gets its own weight.
+• The hidden layer has 16 neurons. These allow the model to learn intermediate
+•
+patterns and combinations of features, such as a team that dominates possession
+and has a strong attack.
+• The output layer is just one neuron, giving us a score (called a logit) that is turned
+•
+into a win probability via a sigmoid function later.
+Building Your First Soccer Prediction Model with PyTorch 
+| 
+195
+
+
+================================================================================
+PAGE 216
+================================================================================
+We use BCE Loss (BCEWithLogitsLoss) as the objective. This loss punishes the model
+whenever its predicted probability is far from the actual result.
+Finally, we choose the Adam optimizer. Adam is an adaptive optimization method
+that efficiently adjusts parameter updates during training, which is one reason it
+works well as a default choice in many deep learning problems.
+Training the model
+Now comes the learning process. Training is an iterative cycle where the model
+repeatedly sees batches of matches, makes predictions, compares them against reality,
+and adjusts its weights accordingly. This cycle is what allows it to gradually improve.
+Here is how we train the model:
+num_epochs = 100
+for epoch in range(num_epochs):
+    model.train()
+    running = 0.0
+    for inputs, targets in train_loader:
+        optimizer.zero_grad()
+        logits = model(inputs).squeeze(1)  # (B,)
+        loss = criterion(
+            logits, targets
+        )  # Targets float in {0,1}
+        loss.backward()
+        optimizer.step()
+        running += loss.item()
+    if (epoch + 1) % 10 == 0:
+        print(
+            f"Epoch {epoch+1:3d}/{num_epochs}  "
+            f"Loss: {running/len(train_loader):.4f}"
+        )
+In this code, each epoch is one full pass through the training data. Inside each epoch,
+the inner loop goes batch by batch. For every mini-batch:
+1. The model makes its best guess at who wins.
+1.
+2. The loss function compares this guess to the actual result, producing a score that
+2.
+reflects how wrong the model was.
+3. Backpropagation then works backward through the network, identifying which
+3.
+weights were responsible for the mistake.
+4. The optimizer updates the weights slightly, nudging the model toward better
+4.
+predictions.
+By repeating this cycle 100 times, the model gradually learns patterns that link pre-
+match features to actual outcomes. Printing the loss every 10 epochs lets us watch its
+196 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 217
+================================================================================
+learning curve. We expect the numbers to go down as the model gradually improves
+its fit to the data.
+Evaluating the model
+Finally, we need to see how well the model generalizes to unseen matches. This is
+where the test set comes in:
+model.eval()
+with torch.no_grad():
+    logits = model(X_test).squeeze(1)  # (N_test,)
+    probs = torch.sigmoid(logits)  # Win probability
+    preds = (probs >= 0.5).float()
+# Quick accuracy (feel free to add ROC/AUC later)
+acc = (preds == y_test).float().mean().item()
+print(f"Test Accuracy: {acc:.3f}")
+Here we switch the model into evaluation mode, which tells PyTorch to disable
+training-specific features like dropout. We also wrap the code in torch.no_grad(),
+which stops gradient tracking and makes evaluation faster.
+The raw outputs are logits, so we apply a sigmoid function to convert them into
+probabilities. A value of 0.73, for example, means the model believes there is a 73%
+chance the home team wins this match. We then apply a threshold (0.5 by default) to
+turn those probabilities into binary predictions.
+The final accuracy tells us the fraction of test matches that were predicted correctly. A
+decent accuracy here suggests that our model has learned useful general patterns, not
+just memorized the training set.
+Wrapping up, we managed to answer a simple yes/no question: will the home team
+win? This is useful, but real soccer matches have more nuance. Many games end in a
+draw, and sometimes the away team steals the show. To capture this fuller picture, we
+now move from binary classification to a multiclass prediction task.
+Match Results: Win, Draw, or Loss
+Our next task is predicting the full-time result (FTR) of a soccer match, which can be
+a home win (H), draw (D), or away win (A). Unlike task 1, where we had to decide
+only win or not, we now face three possible outcomes. As you learned in Chapter 5,
+this is called a multiclass classification problem. The structure of the model is similar,
+but we need to make a few important adjustments to handle multiple classes.
+Preparing the data
+We prepare the data in much the same way as before: split it into training and test
+sets, convert it into tensors, and wrap it in a DataLoader. The key difference is that
+Building Your First Soccer Prediction Model with PyTorch 
+| 
+197
+
+
+================================================================================
+PAGE 218
+================================================================================
+the target variable is no longer binary but categorical. We’ll reuse the same feature
+tensor X, but replace the target with integer class IDs derived from the FTR labels:
+from sklearn.preprocessing import LabelEncoder
+# Encode full-time results as integer class IDs
+le = LabelEncoder()
+y_multiclass = torch.tensor(
+    le.fit_transform(df["FTR"]), dtype=torch.long,
+)
+X_train_mc, X_test_mc, y_train_mc, y_test_mc = train_test_split(
+    X, y_multiclass, test_size=0.2, random_state=42
+)
+train_loader_mc = DataLoader(
+    TensorDataset(X_train_mc, y_train_mc),
+    batch_size=32,
+    shuffle=True,
+)
+test_loader_mc = DataLoader(
+    TensorDataset(X_test_mc, y_test_mc),
+    batch_size=32,
+    shuffle=False,
+)
+Here y_multiclass is now a vector of integers, each representing one of the three
+possible match outcomes. PyTorch’s CrossEntropyLoss, which we’ll use shortly,
+expects class indices in this format. The rest of the pipeline stays the same: we split
+the data and create mini-batches with a DataLoader.
+Defining the model architecture
+We now define a network that can output three scores instead of one. Each score
+corresponds to one possible result: home win, draw, or away win. Here’s our code:
+class MultiClassMLP(nn.Module):
+    def __init__(
+        self, input_size, hidden_size=16, num_classes=3
+    ):
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(
+            hidden_size, num_classes
+        )  # Three outputs
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)  # Logits for each class
+        return x
+input_size = X_train_mc.shape[1]
+model = MultiClassMLP(input_size)
+criterion = nn.CrossEntropyLoss()  # For multiclass problems
+optimizer = optim.Adam(model.parameters(), lr=1e-3)
+198 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
+
+================================================================================
+PAGE 219
+================================================================================
+The biggest change from task 1 is the output layer. Instead of a single neuron
+with a sigmoid, we now have three neurons, one for each class. The model outputs
+raw scores (logits). These logits are automatically passed through a function inside
+CrossEntropyLoss, which turns them into probabilities that sum to 1. In soccer
+terms, the model is learning to distribute its confidence among the three possible
+outcomes.
+Training the model
+Training follows the same rhythm as before: forward pass, compute loss, backpropa‐
+gate, and update weights. The difference is that our labels are now class indices, and
+our loss function expects logits for three classes:
+num_epochs = 100
+for epoch in range(num_epochs):
+    model.train()
+    running_loss = 0.0
+    for inputs, labels in train_loader_mc:
+        optimizer.zero_grad()
+        outputs = model(inputs)  # Logits for 3 classes
+        loss = criterion(
+            outputs, labels
+        )  # Compares logits to true class
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+    if (epoch + 1) % 10 == 0:
+        avg_loss = running_loss / len(train_loader_mc)
+        print(
+            f"Epoch {epoch+1:3d}/{num_epochs}  "
+            f"Loss: {avg_loss:.4f}"
+        )
+What’s happening here? For each mini-batch, the model produces three logits, one
+for each possible outcome. The loss function compares those logits with the true
+result, and backpropagation tells the model how to adjust. Over many epochs, the
+model refines its ability to tell which conditions tend to lead to which result.
+Evaluating the model
+Evaluation also looks similar, except now we’re dealing with three classes. We’ll
+measure accuracy, but also look at precision, recall, and the confusion matrix, which
+helps us see which results are most often misclassified:
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+)
+model.eval()
+all_preds = []
+Building Your First Soccer Prediction Model with PyTorch 
+| 
+199
+
+
+================================================================================
+PAGE 220
+================================================================================
+all_labels = []
+with torch.no_grad():
+    for inputs, labels in test_loader_mc:
+        outputs = model(inputs)
+        _, predicted = torch.max(
+            outputs, 1
+        )  # Pick class with highest logit
+        all_preds.extend(predicted.numpy())
+        all_labels.extend(labels.numpy())
+print(
+    classification_report(
+        all_labels, all_preds, target_names=le.classes_
+    )
+)
+print(confusion_matrix(all_labels, all_preds))
+Here we loop through the test set without gradients. The function call torch.max(out
+puts, 1) selects the class with the highest score, which is the model’s prediction. By
+comparing these predictions with the true labels, we can compute detailed metrics.
+The classification report tells us how well the model performs for each class individu‐
+ally. For instance, the model might be very good at spotting home wins but weaker at
+predicting draws. This is a common pattern in soccer because draws are less frequent
+and thus harder to model. The confusion matrix gives a visual map of where mistakes
+happen, such as predicting a home win when the match was actually a draw.
+Summing up, we’ve now expanded from a simple yes/no prediction to a full three-
+way classification, capturing the richer variety of soccer outcomes. In the next task,
+we’ll go one step further: instead of predicting categories like win or draw, we’ll try to
+forecast the number of goals scored.
+Goal Prediction: Modeling Scoring Output
+In task 2, we have predicted categorical outcomes: win, draw, or loss. But soccer is not
+just about who wins. You also want to predict the number of goals scored, because
+this will help you more deeply understand game dynamics. Many bets are also placed
+on the number of goals scored.
+Because goals are counts (nonnegative integers), we cannot simply use a standard
+linear regression model. Instead, we use a Poisson regression. It assumes that the
+number of goals scored follows a Poisson distribution, which works well for relatively
+rare events like goals in soccer.
+Our target variable is the number of full-time home goals (FTHG):
+y_home_goals = torch.tensor(
+    df["FTHG"].values, dtype=torch.float32
+)
+(
+200 
+| 
+Chapter 7: Deep Learning for Soccer Analytics: From Intuition to Implementation
+
