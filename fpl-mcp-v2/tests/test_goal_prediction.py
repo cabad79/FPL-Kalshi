@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import pytest
 
-from skills.goal_prediction import (
+from fpl_mcp.skills.goal_prediction import (
     calculate_poisson_probabilities,
     estimate_goal_distribution,
     estimate_xg_for_match,
