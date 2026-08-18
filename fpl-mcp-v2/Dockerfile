@@ -38,7 +38,6 @@ RUN pip install --upgrade pip && \
 COPY fpl-mcp-v2/src/ src/
 COPY fpl-mcp-v2/tests/ tests/
 COPY fpl-mcp-v2/pyproject.toml pyproject.toml
-COPY models/ ./models/
 
 # Install application in development mode
 RUN pip install -e .
