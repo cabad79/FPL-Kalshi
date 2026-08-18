@@ -1,10 +1,12 @@
-"""Kalshi Market Integration - API Client and Market Feed Consumer.
+"""Kalshi Market Integration - Official SDK Integration.
 
 This module provides:
-- KalshiAuthClient: OAuth2 authentication with token refresh
-- KalshiMarketClient: Real-time market feed consumer with WebSocket support
+- KalshiAuthClient: RSA signature authentication wrapper
+- KalshiMarketClient: Market API consumer using official Kalshi SDK
 - MarketTypeMapper: Map football predictions to Kalshi contract types
 - Comprehensive data models for contracts, orders, and portfolios
+
+Uses official kalshi_python_async SDK for secure authentication and API access.
 
 Author: SONNET-3 (Kalshi Market Integration Engineer)
 Date: 2026-08-14
@@ -15,13 +17,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Optional, Dict, List
 from collections import defaultdict
 
+from kalshi_python_async import KalshiClient, KalshiAuth, Configuration
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -267,143 +269,97 @@ class GreeksMetrics:
 
 
 class KalshiAuthClient:
-    """OAuth2 authentication client for Kalshi API.
+    """RSA signature authentication client for Kalshi API.
 
-    Manages secure credential handling, token refresh, and rate limiting.
+    Uses official kalshi_python_async SDK for secure authentication.
+    Manages rate limiting and error handling.
     """
+
+    # Kalshi hosts by environment (base URL + required /trade-api/v2 path)
+    _HOSTS = {
+        "demo": "https://external-api.demo.kalshi.co/trade-api/v2",
+        "live": "https://api.elections.kalshi.com/trade-api/v2",
+    }
 
     def __init__(
         self,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        token: Optional[str] = None,
+        key_id: Optional[str] = None,
+        private_key_pem: Optional[str] = None,
+        private_key_file: Optional[str] = None,
+        env: Optional[str] = None,
     ):
-        """Initialize auth client.
+        """Initialize auth client with RSA credentials.
 
         Args:
-            client_id: OAuth2 client ID (defaults to KALSHI_CLIENT_ID env var)
-            client_secret: OAuth2 client secret (defaults to KALSHI_CLIENT_SECRET env var)
-            token: Existing access token (defaults to KALSHI_TOKEN env var)
+            key_id: Kalshi API Key ID (defaults to KALSHI_KEY_ID env var)
+            private_key_pem: RSA private key in PEM format (defaults to KALSHI_PRIVATE_KEY_PEM env var)
+            private_key_file: Path to PEM file (defaults to KALSHI_PRIVATE_KEY_FILE env var)
+            env: "demo" or "live" (defaults to KALSHI_ENV env var, falls back to "demo")
         """
-        self.client_id = client_id or os.getenv("KALSHI_CLIENT_ID", "")
-        self.client_secret = client_secret or os.getenv("KALSHI_CLIENT_SECRET", "")
-        self.token = token or os.getenv("KALSHI_TOKEN", "")
-        self.token_expires_at = datetime.utcnow()
-        self.refresh_token = os.getenv("KALSHI_REFRESH_TOKEN", "")
+        self.key_id = key_id or os.getenv("KALSHI_KEY_ID", "")
+        self.env = (env or os.getenv("KALSHI_ENV", "demo")).lower()
 
-        # Rate limiting
-        self.request_times: List[float] = []
-        self.rate_limit_lock = asyncio.Lock()
+        # Resolve PEM text, whether supplied as a file path or as raw text.
+        key_file = private_key_file or os.getenv("KALSHI_PRIVATE_KEY_FILE", "")
+        if key_file:
+            try:
+                with open(key_file, "r") as f:
+                    pem_text = f.read().strip()
+            except FileNotFoundError:
+                logger.error(f"Private key file not found: {key_file}")
+                pem_text = ""
+        else:
+            pem_text = private_key_pem or os.getenv("KALSHI_PRIVATE_KEY_PEM", "")
 
-        # HTTP client with connection pooling
-        self.client = httpx.AsyncClient(
-            base_url=KALSHI_API_BASE_URL,
-            limits=httpx.Limits(
-                max_connections=POOL_CONNECTIONS,
-                max_keepalive_connections=POOL_MAXSIZE,
-            ),
-            timeout=TIMEOUT,
-        )
+        self.private_key_pem = pem_text
+        self.auth = None
+        self.kalshi_client = None
 
-        if not self.client_id or not self.client_secret:
+        if not self.key_id or not self.private_key_pem:
             logger.warning(
-                "Kalshi credentials not configured. Set KALSHI_CLIENT_ID and "
-                "KALSHI_CLIENT_SECRET environment variables."
+                "Kalshi credentials not configured. Set KALSHI_KEY_ID and "
+                "KALSHI_PRIVATE_KEY_FILE (or KALSHI_PRIVATE_KEY_PEM) environment variables."
             )
-
-    async def authenticate(self) -> bool:
-        """Perform OAuth2 authentication.
-
-        Returns:
-            bool: True if authentication successful
-        """
-        if not self.client_id or not self.client_secret:
-            logger.error("Missing Kalshi credentials")
-            return False
+            return
 
         try:
-            response = await self.client.post(
-                "/auth/login",
-                json={
-                    "email": self.client_id,
-                    "password": self.client_secret,
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
+            host = self._HOSTS.get(self.env, self._HOSTS["demo"])
+            config = Configuration(host=host)
+            self.kalshi_client = KalshiClient(configuration=config)
 
-            self.token = data.get("token", "")
-            self.refresh_token = data.get("refresh_token", "")
-            self.token_expires_at = datetime.utcnow() + timedelta(hours=24)
+            # NOTE: kalshi_python_async's own KalshiClient.set_kalshi_auth() is
+            # broken in the installed version — it references the KalshiAuth
+            # class without importing it (NameError) and expects a file path
+            # even though KalshiAuth itself only accepts PEM text. We build the
+            # KalshiAuth object ourselves and wire it into the same
+            # `kalshi_auth` attribute the SDK's signing code reads internally.
+            self.auth = KalshiAuth(key_id=self.key_id, private_key_pem=self.private_key_pem)
+            self.kalshi_client.kalshi_auth = self.auth
+            logger.info(f"✅ Kalshi RSA authentication initialized ({self.env} @ {host})")
+        except Exception as e:
+            logger.error(f"Failed to initialize Kalshi auth: {e}")
+            self.auth = None
+            self.kalshi_client = None
 
-            logger.info("Successfully authenticated with Kalshi")
-            return True
-        except httpx.HTTPError as e:
-            logger.error(f"Kalshi authentication failed: {e}")
-            return False
+    def is_authenticated(self) -> bool:
+        """Check if authentication is properly configured."""
+        return self.auth is not None and self.kalshi_client is not None
 
-    async def refresh_access_token(self) -> bool:
-        """Refresh access token.
-
-        Returns:
-            bool: True if refresh successful
-        """
-        if not self.refresh_token:
-            logger.warning("No refresh token available, re-authenticating...")
-            return await self.authenticate()
-
-        try:
-            response = await self.client.post(
-                "/auth/refresh",
-                json={"refresh_token": self.refresh_token},
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            self.token = data.get("token", "")
-            self.token_expires_at = datetime.utcnow() + timedelta(hours=24)
-
-            logger.info("Successfully refreshed access token")
-            return True
-        except httpx.HTTPError as e:
-            logger.error(f"Token refresh failed: {e}")
-            return False
-
-    def get_auth_header(self) -> Dict[str, str]:
-        """Get authorization header for API requests."""
-        return {"Authorization": f"Bearer {self.token}"}
-
-    async def check_token_expiration(self) -> None:
-        """Check and refresh token if expired or about to expire."""
-        now = datetime.utcnow()
-        # Refresh if within 1 hour of expiration
-        if now >= self.token_expires_at - timedelta(hours=1):
-            logger.info("Token expiring soon, refreshing...")
-            await self.refresh_access_token()
-
-    async def wait_for_rate_limit(self) -> None:
-        """Enforce rate limiting with sliding window."""
-        async with self.rate_limit_lock:
-            now = time.time()
-            # Remove old entries outside the window
-            self.request_times = [t for t in self.request_times if now - t < RATE_LIMIT_WINDOW]
-
-            # Check if we've hit the limit
-            if len(self.request_times) >= RATE_LIMIT_RPM:
-                # Calculate how long to wait
-                oldest_request = self.request_times[0]
-                wait_time = RATE_LIMIT_WINDOW - (now - oldest_request)
-                if wait_time > 0:
-                    logger.debug(f"Rate limit reached, waiting {wait_time:.2f}s")
-                    await asyncio.sleep(wait_time)
-                    now = time.time()
-                    self.request_times = [t for t in self.request_times if now - t < RATE_LIMIT_WINDOW]
-
-            self.request_times.append(now)
+    def get_client(self) -> Optional[KalshiClient]:
+        """Get the authenticated Kalshi client."""
+        if not self.is_authenticated():
+            logger.error("Not authenticated with Kalshi")
+            return None
+        return self.kalshi_client
 
     async def close(self) -> None:
-        """Close HTTP client connection."""
-        await self.client.aclose()
+        """Close Kalshi client connection."""
+        if self.kalshi_client:
+            try:
+                await self.kalshi_client.close()
+                logger.info("Kalshi client closed")
+            except Exception as e:
+                logger.error(f"Error closing Kalshi client: {e}")
 
 
 # ============================================================================

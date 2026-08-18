@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  kalshi-mcp:
+    image: python:3.11-slim
+    container_name: kalshi-mcp-v0.4.0
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    command: /bin/bash

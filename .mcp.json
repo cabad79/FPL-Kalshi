@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "kalshi": {
+      "command": "C:\\Users\\carlos.jaramillo\\Downloads\\FPL-Kalshi\\kalshi-mcp\\.venv\\Scripts\\mcp-server-kalshi.exe",
+      "args": [],
+      "env": {
+        "KALSHI_ENV": "prod",
+        "KALSHI_API_KEY": "078c022d-482d-4f0a-b596-adbbc33c682c",
+        "KALSHI_PRIVATE_KEY_PATH": "C:\\Users\\carlos.jaramillo\\Downloads\\FPL-Kalshi\\kalshi-private-key.pem"
+      }
+    }
+  }
+}

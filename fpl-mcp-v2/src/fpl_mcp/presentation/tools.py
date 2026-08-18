@@ -15,7 +15,7 @@ from fpl_mcp.services import (
     GameweekService,
     OwnershipService,
     SquadGenerator,
-    MonteCarloSimulator,
+    PlayerValidator,
 )
 from fpl_mcp.utils.params import unwrap
 from fpl_mcp.utils.position_utils import normalize_position
@@ -353,6 +353,99 @@ def register_tools(mcp: FastMCP, services: ServiceContainer) -> None:
         except Exception as exc:
             logger.exception("Tool error: get_double_gameweeks")
             return {"error": f"Failed to get double gameweeks: {exc}"}
+
+    # ------------------------------------------------------------------ #
+    # Player Validation (Multi-Source)
+    # ------------------------------------------------------------------ #
+
+    @mcp.tool()
+    async def validate_player_multi_source(
+        player_id: int,
+        web_name: str,
+        team_name: str,
+    ) -> dict[str, Any]:
+        """Validate a player across multiple sources (FPL API, Wikipedia, TransferMarkt).
+
+        CRITICAL: All sources must agree that the player is in the specified team.
+        A player is only considered valid if ALL sources confirm their team affiliation.
+
+        Args:
+            player_id: FPL element ID
+            web_name: Player web name (e.g., 'Haaland')
+            team_name: Club name (e.g., 'Man City', 'Arsenal')
+        """
+        try:
+            logger.info(
+                "Tool call: validate_player_multi_source(id=%d, name=%s, team=%s)",
+                player_id,
+                web_name,
+                team_name,
+            )
+            validator = PlayerValidator()
+            result = await validator.validate_player(
+                player_id=player_id,
+                team_name=team_name,
+                web_name=web_name,
+            )
+            await validator.close()
+
+            return {
+                "player_id": result.player_id,
+                "web_name": result.web_name,
+                "team_name": result.team_name,
+                "is_valid": result.is_valid,
+                "status": result.status_message,
+                "sources": {
+                    "fpl_api": result.sources.get("fpl_api", {}),
+                    "wikipedia": result.sources.get("wikipedia", {}),
+                    "transfermarkt": result.sources.get("transfermarkt", {}),
+                },
+                "validation_errors": result.validation_errors,
+            }
+        except Exception as exc:
+            logger.exception("Tool error: validate_player_multi_source")
+            return {"error": f"Player validation failed: {exc}"}
+
+    @mcp.tool()
+    async def validate_squad_multi_source(
+        squad: list[dict],
+    ) -> dict[str, Any]:
+        """Validate entire squad across multiple sources.
+
+        CRITICAL: Each player must be validated across FPL API, Wikipedia, and TransferMarkt.
+        Squad is only valid if ALL players are confirmed in ALL sources.
+
+        Args:
+            squad: List of dicts with 'id', 'web_name', 'team' keys
+                  Example: [{'id': 1, 'web_name': 'Haaland', 'team': 'Man City'}, ...]
+        """
+        try:
+            logger.info("Tool call: validate_squad_multi_source with %d players", len(squad))
+            validator = PlayerValidator()
+            result = await validator.validate_squad(squad)
+            await validator.close()
+
+            return {
+                "squad_size": result["squad_size"],
+                "all_valid": result["all_valid"],
+                "valid_count": result["valid_count"],
+                "invalid_count": result["invalid_count"],
+                "status": result["status"],
+                "players": [
+                    {
+                        "player_id": p.player_id,
+                        "web_name": p.web_name,
+                        "team_name": p.team_name,
+                        "is_valid": p.is_valid,
+                        "status": p.status_message,
+                        "errors": p.validation_errors,
+                    }
+                    for p in result["results"]
+                ],
+            }
+        except Exception as exc:
+            logger.exception("Tool error: validate_squad_multi_source")
+            return {"error": f"Squad validation failed: {exc}"}
 
     # ------------------------------------------------------------------ #
     # Live scores
@@ -722,198 +815,6 @@ def register_tools(mcp: FastMCP, services: ServiceContainer) -> None:
             return {"error": str(exc)}
 
     @mcp.tool()
-    async def simulate_squad_performance(
-        player_ids: list[int], captain_id: int | None = None, iterations: int = 100, gameweek_id: int | None = None
-    ) -> dict[str, Any]:
-        """Run Monte Carlo simulation (100+ iterations) on a squad to predict expected GW points.
-
-        Args:
-            player_ids: List of 15 player IDs in the squad.
-            captain_id: Player ID of the captain (auto-select if None).
-            iterations: Number of simulations (default 100).
-            gameweek_id: Gameweek to simulate (uses GW1 if omitted).
-        """
-        try:
-            logger.info(
-                "Tool call: simulate_squad_performance with %d players, %d iterations", len(player_ids), iterations
-            )
-
-            all_players = await services.player_repo.get_all()
-            players_by_id = {p.id: p for p in all_players}
-
-            squad = [players_by_id[pid] for pid in player_ids if pid in players_by_id]
-            if len(squad) != 15:
-                return {"error": f"Squad must have exactly 15 players, got {len(squad)}"}
-
-            fixtures = await services.fixture_repo.get_by_gameweek(gameweek_id or 1)
-            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
-
-            from fpl_mcp.services import MonteCarloSimulator
-
-            simulator = MonteCarloSimulator(fixtures, teams)
-            result = simulator.simulate_squad(squad, captain_id, iterations=min(iterations, 1000))
-
-            return {
-                "squad_id": result.squad_id,
-                "captain": result.captain_player.web_name if result.captain_player else None,
-                "expected_points_avg": round(result.avg_score, 2),
-                "expected_points_p10": round(result.p10_score, 2),
-                "expected_points_p90": round(result.p90_score, 2),
-                "iterations": iterations,
-                "message": f"Expected {result.avg_score:.1f} pts (p10={result.p10_score:.1f}, p90={result.p90_score:.1f})",
-            }
-        except Exception as exc:
-            logger.exception("Tool error: simulate_squad_performance")
-            return {"error": str(exc)}
-
-    @mcp.tool()
-    async def rank_squads_by_simulation(squad_list: list[list[int]], iterations: int = 100) -> dict[str, Any]:
-        """Simulate multiple squads and rank them by expected performance.
-
-        Args:
-            squad_list: List of squads, each squad is a list of 15 player IDs.
-            iterations: Monte Carlo iterations per squad.
-        """
-        try:
-            logger.info("Tool call: rank_squads_by_simulation with %d squads", len(squad_list))
-
-            all_players = await services.player_repo.get_all()
-            players_by_id = {p.id: p for p in all_players}
-
-            squads = []
-            for squad_ids in squad_list[:50]:  # Limit to 50 squads
-                squad = [players_by_id[pid] for pid in squad_ids if pid in players_by_id]
-                if len(squad) == 15:
-                    squads.append(squad)
-
-            if not squads:
-                return {"error": "No valid squads found"}
-
-            fixtures = await services.fixture_repo.get_by_gameweek(1)
-            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
-
-            from fpl_mcp.services import MonteCarloSimulator
-
-            simulator = MonteCarloSimulator(fixtures, teams)
-            results = simulator.compare_squads(squads, iterations=min(iterations, 500))
-
-            return {
-                "total_squads": len(results),
-                "top_3": [
-                    {
-                        "rank": i + 1,
-                        "expected_points": round(r.avg_score, 2),
-                        "p10": round(r.p10_score, 2),
-                        "p90": round(r.p90_score, 2),
-                        "captain": r.captain_player.web_name if r.captain_player else None,
-                    }
-                    for i, r in enumerate(results[:3])
-                ],
-            }
-        except Exception as exc:
-            logger.exception("Tool error: rank_squads_by_simulation")
-            return {"error": str(exc)}
-
-    # ------------------------------------------------------------------ #
-    # Live / Real-time
-    # ------------------------------------------------------------------ #
-
-    @mcp.tool()
-    async def get_gameweek_live_status(gameweek_id: int | None = None) -> dict[str, Any]:
-        """Get live gameweek status including current scores and event metadata.
-
-        Args:
-            gameweek_id: Gameweek ID (uses next/current if omitted).
-        """
-        try:
-            logger.info("Tool call: get_gameweek_live_status with gameweek_id=%s", gameweek_id)
-            if gameweek_id is None:
-                gw = await services.bootstrap_repo.get_current_gameweek()
-                if gw is None:
-                    return {"error": "Unable to determine current gameweek."}
-                gameweek_id = gw.id
-
-            live_data = await services.live_service.get_live_event(gameweek_id)
-            gameweeks = await services.bootstrap_repo.get_gameweeks()
-            gw_info = next((g for g in gameweeks if g.id == gameweek_id), None)
-
-            return {
-                "gameweek_id": gameweek_id,
-                "gameweek_name": gw_info.name if gw_info else f"GW{gameweek_id}",
-                "deadline": gw_info.deadline_time.isoformat() if gw_info and hasattr(gw_info.deadline_time, 'isoformat') else None,
-                "finished": gw_info.finished if gw_info else None,
-                "live_elements": live_data.get("elements", [])[:20],  # Top movers
-            }
-        except Exception as exc:
-            logger.exception("Tool error: get_gameweek_live_status")
-            return {"error": f"Failed to get gameweek status: {exc}"}
-
-    @mcp.tool()
-    async def get_player_detailed_history(player_name: str) -> dict[str, Any]:
-        """Get detailed season history for a player including fixture history and past seasons.
-
-        Args:
-            player_name: Player name or web_name to search for.
-        """
-        try:
-            logger.info("Tool call: get_player_detailed_history for %s", player_name)
-            results = await services.player_repo.search_by_name(player_name, limit=1)
-            if not results:
-                return {"error": f"Player '{player_name}' not found."}
-
-            player = results[0]
-            # Note: player_summary would come from the FPL client's get_player_summary method
-            # For now, return available player data without full history
-            return {
-                "player_id": player.id,
-                "name": player.full_name,
-                "team_id": player.team_id,
-                "position": {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}.get(player.element_type, "UNK"),
-                "current_price": player.price_millions,
-                "total_points": player.total_points,
-                "points_per_game": float(player.points_per_game or 0),
-                "minutes_played": player.minutes,
-                "form": float(player.form or 0),
-                "expected_points_next": float(player.ep_next or 0),
-                "status": player.status,
-                "selected_by_percent": float(player.selected_by_percent or 0),
-            }
-        except Exception as exc:
-            logger.exception("Tool error: get_player_detailed_history")
-            return {"error": f"Failed to get player history: {exc}"}
-
-    @mcp.tool()
-    async def get_fixture_detail(fixture_id: int) -> dict[str, Any]:
-        """Get detailed information about a specific fixture.
-
-        Args:
-            fixture_id: FPL fixture ID.
-        """
-        try:
-            logger.info("Tool call: get_fixture_detail with fixture_id=%d", fixture_id)
-            all_fixtures = await services.fixture_repo.get_all()
-            fixture = next((f for f in all_fixtures if f.id == fixture_id), None)
-            if not fixture:
-                return {"error": f"Fixture {fixture_id} not found."}
-
-            teams = {t.id: t for t in await services.bootstrap_repo.get_teams()}
-            return {
-                "id": fixture.id,
-                "event": fixture.event,
-                "home_team": teams.get(fixture.team_h).name if fixture.team_h in teams else None,
-                "home_team_code": teams.get(fixture.team_h).short_name if fixture.team_h in teams else None,
-                "away_team": teams.get(fixture.team_a).name if fixture.team_a in teams else None,
-                "away_team_code": teams.get(fixture.team_a).short_name if fixture.team_a in teams else None,
-                "kickoff_time": fixture.kickoff_time.isoformat() if hasattr(fixture.kickoff_time, 'isoformat') else fixture.kickoff_time,
-                "home_team_difficulty": fixture.team_h_difficulty,
-                "away_team_difficulty": fixture.team_a_difficulty,
-                "finished": fixture.finished,
-                "home_score": fixture.team_h_score,
-                "away_score": fixture.team_a_score,
-            }
-        except Exception as exc:
-            logger.exception("Tool error: get_fixture_detail")
-            return {"error": f"Failed to get fixture details: {exc}"}
 
 
     @mcp.tool()

@@ -104,7 +104,7 @@ class WeeklySquadGenerator:
         # Get fixtures for this GW
         gw_fixtures = [f for f in self._fixtures if f.event == gameweek]
 
-        # Generate optimized squad (would use SquadGenerator + MonteCarloSimulator)
+        # Generate optimized squad
         # For now, placeholder
         squad = self._all_players[:15]  # Simplified
         captain = self._get_captain_for_gw(squad, gw_fixtures)
