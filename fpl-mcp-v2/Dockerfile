@@ -59,4 +59,4 @@ ENV KALSHI_API_URL=https://api.kalshi.com
 ENV LOG_LEVEL=INFO
 
 # Start the MCP server
-CMD ["fpl-mcp-v2", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "fpl_mcp"]

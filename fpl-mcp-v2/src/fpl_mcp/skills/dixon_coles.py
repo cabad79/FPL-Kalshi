@@ -221,6 +221,55 @@ def predict_match_outcome_dc(
     }
 
 
+def fit_and_predict(
+    home_team: str,
+    away_team: str,
+    historical_matches: list[dict[str, Any]],
+    xi: float = 0.0,
+    max_goals: int = DEFAULT_MAX_GOALS,
+) -> dict[str, float]:
+    """Production entry point: fit Dixon-Coles on real history, predict one fixture.
+
+    This is the validated replacement for the old PPG/Elo-heuristic approach
+    in match_outcomes.predict_match_outcome, which was shown (via backtest) to
+    systematically underestimate draw probability by ~11 percentage points.
+    Backtested on 285 held-out Premier League matches: 4.0% better log-loss
+    and Brier score than a naive baseline, with calibration gaps consistent
+    with normal sampling noise (see skills/model_validation.py).
+
+    Known limitation: for the Championship specifically, backtesting found a
+    real (not noise) calibration gap in the 30-60% probability range that
+    time-decay weighting does not fix — treat predictions in that range for
+    that league with extra caution pending further work.
+
+    Args:
+        home_team: Home team name, must match a team name in historical_matches.
+        away_team: Away team name, must match a team name in historical_matches.
+        historical_matches: List of dicts with home_team, away_team, home_goals,
+            away_goals, and optionally days_ago for recency weighting.
+        xi: Time-decay rate (0.0 = equal weighting). Use 0.0 for the
+            Championship (validated better than decay); 0.0018 (paper
+            default) is reasonable for the Premier League when pooling
+            multiple seasons.
+        max_goals: Grid size for the underlying score matrix.
+
+    Returns:
+        Dict with home_win, draw, away_win, confidence — same shape as
+        match_outcomes.MatchOutcomePrediction, so this is a drop-in
+        replacement at call sites.
+
+    Raises:
+        KeyError: If either team has no matches in historical_matches.
+        ValueError: If historical_matches is empty or malformed.
+    """
+    params = fit_dixon_coles(historical_matches, xi=xi)
+    if home_team not in params.teams:
+        raise KeyError(f"{home_team!r} not found in historical_matches")
+    if away_team not in params.teams:
+        raise KeyError(f"{away_team!r} not found in historical_matches")
+    return predict_match_outcome_dc(params, home_team, away_team, max_goals)
+
+
 def monte_carlo_markets(
     params: DixonColesParams,
     home_team: str,

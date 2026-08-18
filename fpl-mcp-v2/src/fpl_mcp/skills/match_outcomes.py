@@ -54,6 +54,16 @@ def predict_match_outcome(
     Combines multiple prediction approaches (Elo, form-based, head-to-head history)
     using weighted ensemble method to generate robust match outcome predictions.
 
+    KNOWN LIMITATION (backtested 2026-08-18): this Elo-style rating approach
+    systematically underestimates draw probability by roughly 11 percentage
+    points versus real outcome frequency, because draw likelihood depends on
+    each team's scoring tendency, not just the skill gap the rating captures.
+    For new call sites, prefer `dixon_coles.fit_and_predict`, which fits
+    attack/defense parameters directly from match-level goal data and was
+    backtested (285 held-out Premier League matches) at 4.0% better log-loss
+    and Brier score than a naive baseline, with calibration consistent with
+    normal sampling noise. See skills/model_validation.py for the backtest.
+
     Args:
         match_data: Dictionary containing match information:
             - home_team (str): Home team identifier
